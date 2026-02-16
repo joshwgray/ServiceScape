@@ -1,0 +1,23 @@
+{
+  "name": "servicescape",
+  "version": "1.0.0",
+  "description": "3D Organization City Visualizer with Backend API",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "npm run test -ws --if-present",
+    "test:watch": "npm run test:watch -ws --if-present",
+    "build": "npm run build -ws --if-present",
+    "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist",
+    "typecheck": "tsc --build"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
