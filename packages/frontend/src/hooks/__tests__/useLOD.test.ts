@@ -29,7 +29,8 @@ describe('useLOD', () => {
         // Target object at origin
         const { result } = renderHook(() => useLOD(new Vector3(0, 0, 0)));
         
-        let currentState = { camera: mockCamera };
+        // let currentState = { camera: mockCamera };
+        // const currentState = { camera: mockCamera };
         const trigger = (camObj: any) => {
             if(frameCallback) frameCallback(camObj);
         };

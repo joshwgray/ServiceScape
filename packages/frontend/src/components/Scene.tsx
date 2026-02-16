@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber';
 import { PerspectiveCamera } from '@react-three/drei';
 import Ground from './Ground';
 import CameraController from './CameraController';
+import { CityLayout } from './CityLayout';
 
 const Scene: React.FC = () => {
   return (
@@ -17,6 +18,7 @@ const Scene: React.FC = () => {
         shadow-mapSize={[2048, 2048]} 
       />
       <Ground />
+      <CityLayout />
       <fog attach="fog" args={['#111', 100, 1000]} />
     </Canvas>
   );
