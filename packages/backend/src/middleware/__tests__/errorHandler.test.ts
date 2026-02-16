@@ -10,7 +10,7 @@ describe('Error Handler Middleware', () => {
       status: vi.fn().mockReturnThis(),
       json: vi.fn(),
     } as unknown as Response;
-    const next = vi.fn() as NextFunction;
+    const next = vi.fn() as unknown as NextFunction;
 
     errorHandler(error, req, res, next);
 
@@ -30,7 +30,7 @@ describe('Error Handler Middleware', () => {
       status: vi.fn().mockReturnThis(),
       json: vi.fn(),
     } as unknown as Response;
-    const next = vi.fn() as NextFunction;
+    const next = vi.fn() as unknown as NextFunction;
 
     errorHandler(error, req, res, next);
 
@@ -42,13 +42,13 @@ describe('Error Handler Middleware', () => {
   });
 
   it('should handle different error types', () => {
-    const error = { message: 'Custom error', statusCode: 400 };
+    const error = { name: 'CustomError', message: 'Custom error', statusCode: 400 };
     const req = {} as Request;
     const res = {
       status: vi.fn().mockReturnThis(),
       json: vi.fn(),
     } as unknown as Response;
-    const next = vi.fn() as NextFunction;
+    const next = vi.fn() as unknown as NextFunction;
 
     errorHandler(error, req, res, next);
 
@@ -63,7 +63,7 @@ describe('Error Handler Middleware', () => {
       status: vi.fn().mockReturnThis(),
       json: vi.fn(),
     } as unknown as Response;
-    const next = vi.fn() as NextFunction;
+    const next = vi.fn() as unknown as NextFunction;
 
     errorHandler(error, req, res, next);
 

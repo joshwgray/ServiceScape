@@ -1,20 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Pool } from 'pg';
-import { getAllDomains, getDomainById } from '../domainRepository.js';
+import { getAllDomains, getDomainById, createDomain } from '../domainRepository.js';
 import type { DbDomain } from '../../db/schema.js';
 
 describe('Domain Repository', () => {
   let mockPool: Pool;
+  let mockQuery: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    mockQuery = vi.fn();
     mockPool = {
-      query: vi.fn() as any,
+      query: mockQuery,
     } as unknown as Pool;
   });
 
   describe('getAllDomains', () => {
     it('should return empty array when no domains exist', async () => {
-      vi.mocked(mockPool.query).mockResolvedValue({
+      mockQuery.mockResolvedValue({
         rows: [],
         command: '',
         oid: 0,
@@ -46,7 +48,7 @@ describe('Domain Repository', () => {
         },
       ];
 
-      vi.mocked(mockPool.query).mockResolvedValue({
+      mockQuery.mockResolvedValue({
         rows: mockDomains,
         command: '',
         oid: 0,
@@ -72,7 +74,7 @@ describe('Domain Repository', () => {
         updated_at: new Date(),
       };
 
-      vi.mocked(mockPool.query).mockResolvedValue({
+      mockQuery.mockResolvedValue({
         rows: [mockDomain],
         command: '',
         oid: 0,
@@ -87,7 +89,7 @@ describe('Domain Repository', () => {
     });
 
     it('should return null when not found', async () => {
-      vi.mocked(mockPool.query).mockResolvedValue({
+      mockQuery.mockResolvedValue({
         rows: [],
         command: '',
         oid: 0,
@@ -101,6 +103,38 @@ describe('Domain Repository', () => {
       expect(mockPool.query).toHaveBeenCalledWith('SELECT * FROM domains WHERE id = $1', [
         'non-existent-id',
       ]);
+    });
+  });
+
+  describe('createDomain', () => {
+    it('should create and return new domain', async () => {
+      const newDomain = {
+        id: 'domain-123',
+        name: 'New Domain',
+        metadata: { description: 'New domain description' }
+      };
+
+      const createdDomain: DbDomain = {
+        ...newDomain,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+
+      mockQuery.mockResolvedValue({
+        rows: [createdDomain],
+        command: 'INSERT',
+        oid: 0,
+        fields: [],
+        rowCount: 1,
+      });
+
+      const result = await createDomain(mockPool, newDomain);
+
+      expect(result).toEqual(createdDomain);
+      expect(mockPool.query).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO domains'),
+        [newDomain.id, newDomain.name, JSON.stringify(newDomain.metadata)]
+      );
     });
   });
 });

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import type { Pool } from 'pg';
 import { createPool, healthCheck, closePool } from '../connection.js';
 

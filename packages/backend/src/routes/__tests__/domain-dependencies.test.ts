@@ -13,7 +13,7 @@ const domainDependencyRouter = Router({ mergeParams: true });
 domainDependencyRouter.get('/dependencies', async (req, res) => {
   try {
     const pool: Pool = req.app.locals.pool;
-    const { domainId } = req.params;
+    const { domainId } = req.params as { domainId: string };
     const type = req.query.type as 'DECLARED' | 'OBSERVED' | undefined;
 
     // Validate type parameter

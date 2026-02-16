@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { config } from 'dotenv';
-import { createPool, closePool } from './db/connection.js';
-import { runMigrations } from './db/migrate.js';
+import { createPool, closePool } from '../db/connection.js';
+import { runMigrations } from '../db/migrate.js';
 
 // Load environment variables
 config();
@@ -20,7 +20,7 @@ async function main() {
     
     if (result.migrations.length > 0) {
       console.log('\n  New migrations applied:');
-      result.migrations.forEach(m => console.log(`    - ${m}`));
+      result.migrations.forEach((m: string) => console.log(`    - ${m}`));
     }
 
     process.exit(0);

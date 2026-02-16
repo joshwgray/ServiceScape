@@ -13,7 +13,7 @@ const teamDependencyRouter = Router({ mergeParams: true });
 teamDependencyRouter.get('/dependencies', async (req, res) => {
   try {
     const pool: Pool = req.app.locals.pool;
-    const { teamId } = req.params;
+    const { teamId } = req.params as { teamId: string };
     const type = req.query.type as 'DECLARED' | 'OBSERVED' | undefined;
 
     // Validate type parameter

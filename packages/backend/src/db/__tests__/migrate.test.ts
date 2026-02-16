@@ -1,19 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { runMigrations, MigrationResult } from '../migrate.js';
+import { runMigrations } from '../migrate.js';
 import type { Pool } from 'pg';
 import * as fs from 'fs/promises';
-import * as path from 'path';
 
 // Mock the file system
 vi.mock('fs/promises');
 
 describe('Database Migrations', () => {
   let mockPool: Pool;
+  let mockQuery: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    // Create a mock query function
+    mockQuery = vi.fn();
+    
     // Create a mock pool
     mockPool = {
-      query: vi.fn(),
+      query: mockQuery,
       connect: vi.fn(),
       end: vi.fn(),
       on: vi.fn(),
@@ -42,7 +45,7 @@ describe('Database Migrations', () => {
     });
 
     // Mock pool.query for migrations table check and creation
-    vi.mocked(mockPool.query).mockResolvedValue({ rows: [], command: '', oid: 0, fields: [], rowCount: 0 });
+    mockQuery.mockResolvedValue({ rows: [], command: '', oid: 0, fields: [], rowCount: 0 });
 
     const result = await runMigrations(mockPool);
 
@@ -56,7 +59,7 @@ describe('Database Migrations', () => {
 
     // Mock pool.query to track transaction commands
     const queryCalls: string[] = [];
-    vi.mocked(mockPool.query).mockImplementation((sql: any) => {
+    mockQuery.mockImplementation((sql: any) => {
       queryCalls.push(typeof sql === 'string' ? sql : sql.text || '');
       return Promise.resolve({ rows: [], command: '', oid: 0, fields: [], rowCount: 0 });
     });
@@ -73,7 +76,7 @@ describe('Database Migrations', () => {
     vi.mocked(fs.readFile).mockResolvedValue('CREATE TABLE test;');
 
     const insertCalls: any[] = [];
-    vi.mocked(mockPool.query).mockImplementation((sql: any) => {
+    mockQuery.mockImplementation((sql: any) => {
       if (typeof sql === 'object' && sql.text && sql.text.includes('INSERT INTO migrations')) {
         insertCalls.push(sql);
       }
@@ -92,7 +95,7 @@ describe('Database Migrations', () => {
 
     // Mock that migration already exists
     let queryCount = 0;
-    vi.mocked(mockPool.query).mockImplementation((sql: any) => {
+    mockQuery.mockImplementation((sql: any) => {
       const sqlText = typeof sql === 'string' ? sql : sql.text || '';
       
       // First query checks for existing migrations
@@ -123,7 +126,7 @@ describe('Database Migrations', () => {
 
     // Mock query to fail on the migration SQL
     let shouldFail = false;
-    vi.mocked(mockPool.query).mockImplementation((sql: any) => {
+    mockQuery.mockImplementation((sql: any) => {
       const sqlText = typeof sql === 'string' ? sql : sql.text || '';
       
       if (sqlText.includes('INVALID SQL')) {

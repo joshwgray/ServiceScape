@@ -9,10 +9,12 @@ import type { DbLayoutCache, DbDomain, DbTeam, DbService } from '../../db/schema
 
 describe('Layout Service', () => {
   let mockPool: Pool;
+  let mockQuery: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    mockQuery = vi.fn();
     mockPool = {
-      query: vi.fn() as any,
+      query: mockQuery,
     } as unknown as Pool;
   });
 
@@ -29,7 +31,7 @@ describe('Layout Service', () => {
         expires_at: new Date(Date.now() + 3600000), // 1 hour from now
       };
 
-      vi.mocked(mockPool.query).mockResolvedValueOnce({
+      mockQuery.mockResolvedValueOnce({
         rows: [mockCache],
         command: '',
         oid: 0,
@@ -68,7 +70,7 @@ describe('Layout Service', () => {
         },
       ];
 
-      vi.mocked(mockPool.query)
+      mockQuery
         .mockResolvedValueOnce({ rows: [expiredCache], command: '', oid: 0, fields: [], rowCount: 1 })
         .mockResolvedValueOnce({ rows: mockDomains, command: '', oid: 0, fields: [], rowCount: 1 })
         .mockResolvedValueOnce({ rows: [], command: '', oid: 0, fields: [], rowCount: 0 })
@@ -92,7 +94,7 @@ describe('Layout Service', () => {
         },
       ];
 
-      vi.mocked(mockPool.query)
+      mockQuery
         .mockResolvedValueOnce({ rows: [], command: '', oid: 0, fields: [], rowCount: 0 })
         .mockResolvedValueOnce({ rows: mockDomains, command: '', oid: 0, fields: [], rowCount: 1 })
         .mockResolvedValueOnce({ rows: [], command: '', oid: 0, fields: [], rowCount: 0 })
@@ -142,7 +144,7 @@ describe('Layout Service', () => {
         },
       ];
 
-      vi.mocked(mockPool.query)
+      mockQuery
         .mockResolvedValueOnce({ rows: mockDomains, command: '', oid: 0, fields: [], rowCount: 1 })
         .mockResolvedValueOnce({ rows: mockTeams, command: '', oid: 0, fields: [], rowCount: 1 })
         .mockResolvedValueOnce({ rows: mockServices, command: '', oid: 0, fields: [], rowCount: 1 })
@@ -170,7 +172,7 @@ describe('Layout Service', () => {
         },
       ];
 
-      vi.mocked(mockPool.query)
+      mockQuery
         .mockResolvedValueOnce({ rows: mockDomains, command: '', oid: 0, fields: [], rowCount: 1 })
         .mockResolvedValueOnce({ rows: [], command: '', oid: 0, fields: [], rowCount: 0 })
         .mockResolvedValueOnce({ rows: [], command: '', oid: 0, fields: [], rowCount: 0 })
@@ -188,7 +190,7 @@ describe('Layout Service', () => {
 
   describe('invalidateLayoutCache', () => {
     it('should delete cache entries', async () => {
-      vi.mocked(mockPool.query).mockResolvedValueOnce({
+      mockQuery.mockResolvedValueOnce({
         rows: [],
         command: '',
         oid: 0,

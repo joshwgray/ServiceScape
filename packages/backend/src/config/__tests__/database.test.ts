@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { getDatabaseConfig, DatabaseConfig } from '../database.js';
+import { getDatabaseConfig } from '../database.js';
 
 describe('Database Configuration', () => {
   const originalEnv = process.env;

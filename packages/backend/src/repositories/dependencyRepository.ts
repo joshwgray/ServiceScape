@@ -1,6 +1,14 @@
 import type { Pool } from 'pg';
 import type { DbDependency, DependencyType } from '../db/schema.js';
 
+interface CreateDependencyInput {
+  id: string;
+  from_service_id: string;
+  to_service_id: string;
+  type: DependencyType;
+  metadata: Record<string, any>;
+}
+
 /**
  * Get count of upstream dependencies (services this service depends on)
  * Upstream = dependencies where this service is the source (from_service_id)
@@ -109,4 +117,16 @@ export async function getDependenciesByType(
     [type]
   );
   return result.rows;
+}
+/**
+ * Create a new dependency
+ */
+export async function createDependency(pool: Pool, dependency: CreateDependencyInput): Promise<DbDependency> {
+  const result = await pool.query<DbDependency>(
+    `INSERT INTO dependencies (id, from_service_id, to_service_id, type, metadata, created_at, updated_at) 
+     VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+     RETURNING *`,
+    [dependency.id, dependency.from_service_id, dependency.to_service_id, dependency.type, JSON.stringify(dependency.metadata)]
+  );
+  return result.rows[0];
 }

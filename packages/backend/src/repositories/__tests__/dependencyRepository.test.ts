@@ -5,21 +5,24 @@ import {
   getUpstreamDependencies,
   getDownstreamDependencies,
   getDependenciesByType,
+  createDependency,
 } from '../dependencyRepository.js';
 import type { DbDependency } from '../../db/schema.js';
 
 describe('Dependency Repository', () => {
   let mockPool: Pool;
+  let mockQuery: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    mockQuery = vi.fn();
     mockPool = {
-      query: vi.fn() as any,
+      query: mockQuery,
     } as unknown as Pool;
   });
 
   describe('getDependenciesByServiceId', () => {
     it('should return empty array when no dependencies exist', async () => {
-      vi.mocked(mockPool.query).mockResolvedValue({
+      mockQuery.mockResolvedValue({
         rows: [],
         command: '',
         oid: 0,
@@ -58,7 +61,7 @@ describe('Dependency Repository', () => {
         },
       ];
 
-      vi.mocked(mockPool.query).mockResolvedValue({
+      mockQuery.mockResolvedValue({
         rows: mockDeps,
         command: '',
         oid: 0,
@@ -87,7 +90,7 @@ describe('Dependency Repository', () => {
         },
       ];
 
-      vi.mocked(mockPool.query).mockResolvedValue({
+      mockQuery.mockResolvedValue({
         rows: mockDeps,
         command: '',
         oid: 0,
@@ -106,7 +109,7 @@ describe('Dependency Repository', () => {
     });
 
     it('should filter by type when provided', async () => {
-      vi.mocked(mockPool.query).mockResolvedValue({
+      mockQuery.mockResolvedValue({
         rows: [],
         command: '',
         oid: 0,
@@ -137,7 +140,7 @@ describe('Dependency Repository', () => {
         },
       ];
 
-      vi.mocked(mockPool.query).mockResolvedValue({
+      mockQuery.mockResolvedValue({
         rows: mockDeps,
         command: '',
         oid: 0,
@@ -156,7 +159,7 @@ describe('Dependency Repository', () => {
     });
 
     it('should filter by type when provided', async () => {
-      vi.mocked(mockPool.query).mockResolvedValue({
+      mockQuery.mockResolvedValue({
         rows: [],
         command: '',
         oid: 0,
@@ -187,7 +190,7 @@ describe('Dependency Repository', () => {
         },
       ];
 
-      vi.mocked(mockPool.query).mockResolvedValue({
+      mockQuery.mockResolvedValue({
         rows: mockDeps,
         command: '',
         oid: 0,
@@ -206,7 +209,7 @@ describe('Dependency Repository', () => {
     });
 
     it('should return only observed dependencies', async () => {
-      vi.mocked(mockPool.query).mockResolvedValue({
+      mockQuery.mockResolvedValue({
         rows: [],
         command: '',
         oid: 0,
@@ -219,6 +222,40 @@ describe('Dependency Repository', () => {
       expect(mockPool.query).toHaveBeenCalledWith(
         expect.stringContaining('type = $1'),
         ['OBSERVED']
+      );
+    });
+  });
+
+  describe('createDependency', () => {
+    it('should create and return new dependency', async () => {
+      const newDependency = {
+        id: 'dep-123',
+        from_service_id: 'service-1',
+        to_service_id: 'service-2',
+        type: 'DECLARED' as const,
+        metadata: { strength: 'high' }
+      };
+
+      const createdDependency: DbDependency = {
+        ...newDependency,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+
+      mockQuery.mockResolvedValue({
+        rows: [createdDependency],
+        command: 'INSERT',
+        oid: 0,
+        fields: [],
+        rowCount: 1,
+      });
+
+      const result = await createDependency(mockPool, newDependency);
+
+      expect(result).toEqual(createdDependency);
+      expect(mockPool.query).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO dependencies'),
+        [newDependency.id, newDependency.from_service_id, newDependency.to_service_id, newDependency.type, JSON.stringify(newDependency.metadata)]
       );
     });
   });

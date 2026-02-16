@@ -9,7 +9,7 @@ export function errorHandler(
   error: ErrorWithStatus,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void {
   // Determine status code
   const status = error.status || error.statusCode || 500;

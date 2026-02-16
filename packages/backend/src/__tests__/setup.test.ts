@@ -1,13 +1,12 @@
 import { describe, it, expect } from 'vitest';
+import type { Domain, Team, Service } from '@servicescape/shared';
 
 describe('Backend Package', () => {
   it('should have a working test environment', () => {
     expect(true).toBe(true);
   });
 
-  it('should be able to import shared types', async () => {
-    const { Domain, Team, Service } = await import('@servicescape/shared');
-    
+  it('should be able to use shared types', () => {
     const domain: Domain = { id: 'test', name: 'Test Domain' };
     const team: Team = { id: 'team-1', domainId: domain.id, name: 'Test Team' };
     const service: Service = { id: 'svc-1', teamId: team.id, name: 'Test Service' };

@@ -4,21 +4,24 @@ import {
   getServicesByTeamId,
   getServiceById,
   getAllServices,
+  createService,
 } from '../serviceRepository.js';
 import type { DbService } from '../../db/schema.js';
 
 describe('Service Repository', () => {
   let mockPool: Pool;
+  let mockQuery: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    mockQuery = vi.fn();
     mockPool = {
-      query: vi.fn() as any,
+      query: mockQuery,
     } as unknown as Pool;
   });
 
   describe('getServicesByTeamId', () => {
     it('should return empty array when no services exist', async () => {
-      vi.mocked(mockPool.query).mockResolvedValue({
+      mockQuery.mockResolvedValue({
         rows: [],
         command: '',
         oid: 0,
@@ -59,7 +62,7 @@ describe('Service Repository', () => {
         },
       ];
 
-      vi.mocked(mockPool.query).mockResolvedValue({
+      mockQuery.mockResolvedValue({
         rows: mockServices,
         command: '',
         oid: 0,
@@ -88,7 +91,7 @@ describe('Service Repository', () => {
         },
       ];
 
-      vi.mocked(mockPool.query).mockResolvedValue({
+      mockQuery.mockResolvedValue({
         rows: mockServices,
         command: '',
         oid: 0,
@@ -120,7 +123,7 @@ describe('Service Repository', () => {
         updated_at: new Date(),
       };
 
-      vi.mocked(mockPool.query).mockResolvedValue({
+      mockQuery.mockResolvedValue({
         rows: [mockService],
         command: '',
         oid: 0,
@@ -137,7 +140,7 @@ describe('Service Repository', () => {
     });
 
     it('should return null when not found', async () => {
-      vi.mocked(mockPool.query).mockResolvedValue({
+      mockQuery.mockResolvedValue({
         rows: [],
         command: '',
         oid: 0,
@@ -179,7 +182,7 @@ describe('Service Repository', () => {
         },
       ];
 
-      vi.mocked(mockPool.query).mockResolvedValue({
+      mockQuery.mockResolvedValue({
         rows: mockServices,
         command: '',
         oid: 0,
@@ -195,7 +198,7 @@ describe('Service Repository', () => {
     });
 
     it('should return empty array when no services exist', async () => {
-      vi.mocked(mockPool.query).mockResolvedValue({
+      mockQuery.mockResolvedValue({
         rows: [],
         command: '',
         oid: 0,
@@ -206,6 +209,41 @@ describe('Service Repository', () => {
       const result = await getAllServices(mockPool);
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('createService', () => {
+    it('should create and return new service', async () => {
+      const newService = {
+        id: 'service-123',
+        team_id: 'team-1',
+        name: 'New Service',
+        type: 'API',
+        tier: 'CRITICAL',
+        metadata: { language: 'TypeScript' }
+      };
+
+      const createdService: DbService = {
+        ...newService,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+
+      mockQuery.mockResolvedValue({
+        rows: [createdService],
+        command: 'INSERT',
+        oid: 0,
+        fields: [],
+        rowCount: 1,
+      });
+
+      const result = await createService(mockPool, newService);
+
+      expect(result).toEqual(createdService);
+      expect(mockPool.query).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO services'),
+        [newService.id, newService.team_id, newService.name, newService.type, newService.tier, JSON.stringify(newService.metadata)]
+      );
     });
   });
 });

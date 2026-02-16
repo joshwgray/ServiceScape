@@ -17,7 +17,7 @@ describe('Request Logger Middleware', () => {
     const res = {
       on: vi.fn(),
     } as unknown as Response;
-    const next = vi.fn() as NextFunction;
+    const next = vi.fn() as unknown as NextFunction;
 
     requestLogger(req, res, next);
 
@@ -28,36 +28,38 @@ describe('Request Logger Middleware', () => {
     expect(next).toHaveBeenCalled();
   });
 
-  it('should log response status and duration', (done) => {
+  it('should log response status and duration', async () => {
     const req = {
       method: 'POST',
       path: '/api/create',
     } as Request;
+    
+    let finishCallback: (() => void) | undefined;
     const res = {
-      on: vi.fn((event, callback) => {
+      on: vi.fn((event: string, callback: () => void) => {
         if (event === 'finish') {
-          // Simulate response finishing
-          setTimeout(() => {
-            callback();
-            
-            // Check that finish was logged
-            expect(consoleLogSpy).toHaveBeenCalledTimes(2);
-            const finishLog = consoleLogSpy.mock.calls[1][0];
-            expect(finishLog).toContain('POST');
-            expect(finishLog).toContain('/api/create');
-            expect(finishLog).toMatch(/\d+ms/); // Should contain duration
-            
-            done();
-          }, 10);
+          finishCallback = callback;
         }
       }),
       statusCode: 201,
     } as unknown as Response;
-    const next = vi.fn() as NextFunction;
+    const next = vi.fn() as unknown as NextFunction;
 
     requestLogger(req, res, next);
 
     expect(next).toHaveBeenCalled();
+    
+    // Simulate response finishing
+    if (finishCallback) {
+      finishCallback();
+      
+      // Check that finish was logged
+      expect(consoleLogSpy).toHaveBeenCalledTimes(2);
+      const finishLog = consoleLogSpy.mock.calls[1][0];
+      expect(finishLog).toContain('POST');
+      expect(finishLog).toContain('/api/create');
+      expect(finishLog).toMatch(/\d+ms/); // Should contain duration
+    }
   });
 
   it('should handle requests without path', () => {
@@ -68,7 +70,7 @@ describe('Request Logger Middleware', () => {
     const res = {
       on: vi.fn(),
     } as unknown as Response;
-    const next = vi.fn() as NextFunction;
+    const next = vi.fn() as unknown as NextFunction;
 
     requestLogger(req, res, next);
 

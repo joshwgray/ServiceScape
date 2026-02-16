@@ -9,9 +9,11 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "migrate": "tsx src/scripts/migrate.ts",
+    "seed": "bash scripts/seed.sh",
+    "seed:run": "tsx src/scripts/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit && tsc --project tsconfig.test.json"
   },
   "dependencies": {
     "@servicescape/shared": "*",

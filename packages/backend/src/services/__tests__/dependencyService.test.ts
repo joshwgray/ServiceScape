@@ -151,13 +151,13 @@ describe('Dependency Service', () => {
 
       vi.mocked(serviceRepo.getServicesByTeamId).mockResolvedValue(mockServices);
       vi.mocked(dependencyRepo.getUpstreamDependencies)
-        .mockImplementation(async (pool, serviceId) => {
+        .mockImplementation(async (_pool, serviceId) => {
           if (serviceId === 'service-1') return service1UpstreamDeps;
           return [];
         });
       vi.mocked(dependencyRepo.getDownstreamDependencies).mockResolvedValue([]);
       vi.mocked(serviceRepo.getServiceById)
-        .mockImplementation(async (pool, id) => {
+        .mockImplementation(async (_pool, id) => {
           if (id === 'service-3') return externalService;
           return mockServices.find(s => s.id === id) || null;
         });
@@ -231,12 +231,12 @@ describe('Dependency Service', () => {
       vi.mocked(serviceRepo.getServicesByTeamId).mockResolvedValue(mockServices);
       vi.mocked(dependencyRepo.getUpstreamDependencies).mockResolvedValue([]);
       vi.mocked(dependencyRepo.getDownstreamDependencies)
-        .mockImplementation(async (pool, serviceId) => {
+        .mockImplementation(async (_pool, serviceId) => {
           if (serviceId === 'service-1') return service1DownstreamDeps;
           return [];
         });
       vi.mocked(serviceRepo.getServiceById)
-        .mockImplementation(async (pool, id) => {
+        .mockImplementation(async (_pool, id) => {
           if (id === 'service-3') return externalService;
           return mockServices.find(s => s.id === id) || null;
         });
