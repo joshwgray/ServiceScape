@@ -1,0 +1,35 @@
+#!/usr/bin/env node
+import { config } from 'dotenv';
+import { createPool, closePool } from './db/connection.js';
+import { runMigrations } from './db/migrate.js';
+
+// Load environment variables
+config();
+
+async function main() {
+  console.log('🔄 Running database migrations...');
+
+  const pool = createPool();
+
+  try {
+    const result = await runMigrations(pool);
+
+    console.log('✅ Migrations completed successfully!');
+    console.log(`  - Executed: ${result.executed}`);
+    console.log(`  - Skipped: ${result.skipped}`);
+    
+    if (result.migrations.length > 0) {
+      console.log('\n  New migrations applied:');
+      result.migrations.forEach(m => console.log(`    - ${m}`));
+    }
+
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Migration failed:', error);
+    process.exit(1);
+  } finally {
+    await closePool(pool);
+  }
+}
+
+main();
