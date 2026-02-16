@@ -8,7 +8,7 @@ describe('Team Repository', () => {
 
   beforeEach(() => {
     mockPool = {
-      query: vi.fn(),
+      query: vi.fn() as any,
     } as unknown as Pool;
   });
 

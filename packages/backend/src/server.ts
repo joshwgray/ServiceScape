@@ -5,6 +5,8 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { domainRouter } from './routes/domains.js';
 import { teamRouter } from './routes/teams.js';
 import { serviceRouter } from './routes/services.js';
+import { dependencyRouter } from './routes/dependencies.js';
+import { layoutRouter } from './routes/layout.js';
 
 export const app: Express = express();
 
@@ -37,6 +39,12 @@ apiRouter.use('/domains/:domainId/teams', teamRouter);
 apiRouter.use('/teams', teamRouter);
 apiRouter.use('/teams/:teamId/services', serviceRouter);
 apiRouter.use('/services', serviceRouter);
+
+// Dependency routes
+apiRouter.use('/services/:serviceId/dependencies', dependencyRouter);
+
+// Layout routes
+apiRouter.use('/layout', layoutRouter);
 
 // Mount API router
 app.use('/api', apiRouter);

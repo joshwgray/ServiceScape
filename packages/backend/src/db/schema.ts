@@ -49,3 +49,18 @@ export interface DbDependency {
   created_at: Date;
   updated_at: Date;
 }
+
+export type DependencyType = 'DECLARED' | 'OBSERVED';
+
+export type LayoutType = 'DOMAIN_GRID' | 'TEAM_TREEMAP' | 'SERVICE_STACK';
+
+export interface DbLayoutCache {
+  id: string;
+  cache_key: string;
+  layout_type: LayoutType;
+  positions: Record<string, any>;
+  metadata: Record<string, any>;
+  created_at: Date;
+  updated_at: Date;
+  expires_at: Date | null;
+}
