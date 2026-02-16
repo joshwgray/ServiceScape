@@ -2,6 +2,8 @@
  * Shared types index - exports all type definitions
  */
 
+export const SHARED_VERSION = '1.0.0';
+
 // Organization types
 export type {
   Domain,
