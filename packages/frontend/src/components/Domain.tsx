@@ -94,7 +94,8 @@ export const Domain: React.FC<DomainProps> = ({ domain, position }) => {
                     <Building 
                         key={team.id} 
                         team={team} 
-                        position={[x, 0, z]} 
+                        position={[x, 0, z]}
+                        domainPosition={position}
                     />
                 );
             })}
