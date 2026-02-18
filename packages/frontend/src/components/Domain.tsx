@@ -7,7 +7,9 @@ import { useOrganization } from '../contexts/OrganizationContext';
 import { getTeams } from '../services/apiClient';
 import type { LayoutPositions } from '../services/apiClient';
 import { generateColor } from '../utils/colorGenerator';
+import { getLegoPlateColor } from '../utils/legoColors';
 import { Building } from './Building.tsx';
+import { LegoBaseplate } from './LegoBaseplate';
 import * as THREE from 'three';
 import { Text } from '@react-three/drei';
 
@@ -54,31 +56,28 @@ export const Domain: React.FC<DomainProps> = ({ domain, position, layout: layout
         // Simple Box
         return (
             <mesh position={position}>
-                <boxGeometry args={[50, 5, 50]} />
+                <boxGeometry args={[10, 2, 10]} />
                 <meshStandardMaterial color={color} />
             </mesh>
         );
     }
 
-    // MEDIUM+ : Detailed Plane with Border
+    // MEDIUM+ : LEGO snap-on domain plate
     return (
         <group position={position}>
-            {/* Ground Plane */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-                <planeGeometry args={[100, 100]} />
-                <meshStandardMaterial color={color} opacity={0.5} transparent />
-            </mesh>
-            
-            {/* Border */}
-            <lineSegments>
-                <edgesGeometry args={[new THREE.BoxGeometry(100, 1, 100)]} />
-                <lineBasicMaterial color="white" />
-            </lineSegments>
+            {/* Domain Snap-on Plate — offset to cover the +x/+z quadrant where buildings actually sit */}
+            <LegoBaseplate
+                width={20}
+                depth={20}
+                thickness={0.4}
+                color={getLegoPlateColor(domain.id)}
+                position={[10, 0.2, 10]}
+            />
 
             {/* Label */}
             <Text 
-                position={[0, 2, 0]} 
-                fontSize={1} 
+                position={[10, 2, 10]} 
+                fontSize={0.5} 
                 color="black"
                 anchorX="center"
                 anchorY="middle"
@@ -90,21 +89,21 @@ export const Domain: React.FC<DomainProps> = ({ domain, position, layout: layout
             {teams.map((team, index) => {
                 let teamPosition: [number, number, number] = [0, 0, 0];
                 
+                // Plate top is at y=0.4 (thickness=0.4, center at 0.2, top at 0.4)
+                const PLATE_TOP = 0.4;
                 if (layout?.teams[team.id]) {
                     const absPos = layout.teams[team.id];
                     // Calculate relative position since group is already at domain position
+                    // Y uses PLATE_TOP so buildings sit on top of the domain plate
                     teamPosition = [
                         absPos.x - position[0],
-                        absPos.y - position[1],
+                        PLATE_TOP,
                         absPos.z - position[2]
                     ];
                 } else {
                     // Fallback to circular arrangement if layout missing
-                    const offset = 5;
                     const angle = (index / teams.length) * Math.PI * 2;
-                    const x = Math.cos(angle) * offset;
-                    const z = Math.sin(angle) * offset;
-                    teamPosition = [x, 0, z];
+                    teamPosition = [Math.cos(angle) * 20 + 50, PLATE_TOP, Math.sin(angle) * 20 + 50];
                 }
                 
                 return (

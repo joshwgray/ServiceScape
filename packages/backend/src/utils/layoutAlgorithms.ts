@@ -66,17 +66,18 @@ export function calculateTeamTreemap(
   const positionMap = new Map<string, Position3D>();
   
   // Simple row-based packing on x/z plane
-  let currentX = domainBounds.x;
-  let currentZ = domainBounds.z;
+  const border = 3; // 3-stud border on domain plate edges
+  const padding = 2; // studs between teams
+  let currentX = domainBounds.x + border;
+  let currentZ = domainBounds.z + border;
   let rowDepth = 0;
   
   sortedTeams.forEach((team) => {
     const teamSize = team.size || 50;
-    const padding = 5;
     
     // Check if we need to move to next row (along z-axis)
-    if (currentX + teamSize > domainBounds.x + domainBounds.width) {
-      currentX = domainBounds.x;
+    if (currentX + teamSize > domainBounds.x + domainBounds.width - border) {
+      currentX = domainBounds.x + border;
       currentZ += rowDepth + padding;
       rowDepth = 0;
     }

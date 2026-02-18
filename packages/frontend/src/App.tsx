@@ -22,13 +22,15 @@ function App() {
       <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
           <div style={{ 
               position: 'absolute', 
-              top: 10, 
-              left: 10, 
+              bottom: 12, 
+              right: 12, 
               zIndex: 10, 
               background: tokens.colors.backgroundOverlay, 
               color: tokens.colors.text.primary, 
               padding: tokens.layout.spacing.sm,
               borderRadius: tokens.layout.borderRadius,
+              fontSize: '11px',
+              opacity: 0.75,
               pointerEvents: 'none'
           }}>
               API: {apiStatus}

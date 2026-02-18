@@ -151,8 +151,8 @@ describe('Domain Component', () => {
         await waitFor(() => {
             const buildingEl = screen.getByTestId('building');
             expect(buildingEl).toBeInTheDocument();
-            // Building should be at relative position (10, 0, 5) from domain
-            expect(buildingEl).toHaveAttribute('data-position', '10,0,5');
+            // Building should be at relative position (10, PLATE_TOP=0.4, 5) from domain
+            expect(buildingEl).toHaveAttribute('data-position', '10,0.4,5');
         });
     });
 
@@ -184,30 +184,27 @@ describe('Domain Component', () => {
     });
 
     describe('Domain geometry sizing', () => {
-        it('renders with correct 100x100 plane geometry', () => {
+        it('renders with correct 100x100 LEGO baseplate', () => {
             mockIsDomainVisible.mockReturnValue(true);
             mockUseLOD.mockReturnValue(LODLevel.MEDIUM);
             
             const { container } = render(<Domain domain={mockDomain} position={[0,0,0]} />);
             
-            // Check for planeGeometry with 100x100 args
-            const planeGeometry = container.querySelector('planeGeometry');
-            expect(planeGeometry).toBeInTheDocument();
-            expect(planeGeometry).toHaveAttribute('args', '100,100');
+            // LegoBaseplate renders as a group with a mesh using geometry/material props
+            // (geometry is now passed as a prop via useMemo, not as a child <boxGeometry> element)
+            const mesh = container.querySelector('mesh');
+            expect(mesh).toBeInTheDocument();
         });
 
-        it('renders border with correct 100x100 bounds', () => {
+        it('renders domain plate without border lineSegments', () => {
             mockIsDomainVisible.mockReturnValue(true);
             mockUseLOD.mockReturnValue(LODLevel.MEDIUM);
             
             const { container } = render(<Domain domain={mockDomain} position={[0,0,0]} />);
             
-            // EdgeGeometry should use BoxGeometry with 100x1x100
-            const edgesGeometry = container.querySelector('edgesGeometry');
-            expect(edgesGeometry).toBeInTheDocument();
-            
-            // Verify BoxGeometry was called with correct dimensions [100, 1, 100]
-            expect(boxGeometryCalls).toContainEqual([100, 1, 100]);
+            // The LEGO plate replaces the border — no lineSegments in MEDIUM+ LOD
+            const lineSegments = container.querySelector('lineSegments');
+            expect(lineSegments).not.toBeInTheDocument();
         });
 
         it('renders FAR LOD box with appropriately scaled dimensions', () => {

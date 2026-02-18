@@ -6,6 +6,8 @@ import { generateColor } from '../utils/colorGenerator';
 import { useSelectionStore } from '../stores/selectionStore';
 import { useInteraction } from '../hooks/useInteraction';
 import { tokens } from '../styles/tokens';
+import { LegoBrick } from './LegoBrick';
+import { getStudVariant } from '../utils/legoGeometry';
 
 const SERVICE_WIDTH = 1.8;
 const SERVICE_DEPTH = 1.8;
@@ -38,11 +40,16 @@ export const ServiceFloor: React.FC<ServiceFloorProps> = ({ service, position, h
       onPointerOver={handlePointerOver(service.id)}
       onPointerOut={handlePointerOut}
     >
-      {/* Service Geometry: Box */}
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={[SERVICE_WIDTH, height, SERVICE_DEPTH]} />
-        <meshStandardMaterial color={displayColor} />
-      </mesh>
+      {/* Service Geometry: LEGO Brick */}
+      <LegoBrick
+        width={SERVICE_WIDTH}
+        height={height}
+        depth={SERVICE_DEPTH}
+        color={displayColor}
+        studVariant={getStudVariant(service.id)}
+        castShadow
+        receiveShadow
+      />
       <Text
         position={[0, height * TEXT_Y_OFFSET_FACTOR + TEXT_Y_OFFSET_FIXED, TEXT_Z_OFFSET]}
         fontSize={0.2}

@@ -1,15 +1,17 @@
 import React from 'react';
-import { DoubleSide } from 'three';
+import { LegoBaseplate } from './LegoBaseplate';
 
 const Ground: React.FC = () => {
   return (
-    <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} receiveShadow>
-        <planeGeometry args={[2000, 2000]} />
-        <meshStandardMaterial color="#1a1a1a" side={DoubleSide} />
-      </mesh>
-      <gridHelper args={[2000, 100, '#444444', '#222222']} position={[0, 0, 0]} />
-    </group>
+    <LegoBaseplate
+      width={600}
+      depth={600}
+      thickness={0.25}
+      color="#00A650"
+      position={[0, 0, 0]}
+      studSpacing={1}
+      maxStudCap={300}
+    />
   );
 };
 

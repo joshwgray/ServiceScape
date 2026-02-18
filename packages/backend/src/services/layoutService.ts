@@ -15,7 +15,7 @@ export interface LayoutPositions {
 
 const CACHE_KEY = 'layout_all';
 const CACHE_DURATION_MS = 3600000; // 1 hour
-const CACHE_VERSION = 3; // Increment when layout structure changes
+const CACHE_VERSION = 5; // Increment when layout structure changes
 
 /**
  * Get layout positions, using cache if available
@@ -58,8 +58,8 @@ export async function computeLayout(pool: Pool): Promise<LayoutPositions> {
   };
 
   // Calculate domain positions
-  const domainItems = domains.map((d) => ({ id: d.id, name: d.name, size: 100 }));
-  const domainPositions = calculateDomainGrid(domainItems, 150);
+  const domainItems = domains.map((d) => ({ id: d.id, name: d.name, size: 20 }));
+  const domainPositions = calculateDomainGrid(domainItems, 24);
 
   domains.forEach((domain, index) => {
     positions.domains[domain.id] = domainPositions[index];
@@ -79,12 +79,12 @@ export async function computeLayout(pool: Pool): Promise<LayoutPositions> {
         x: domainPos.x,
         y: domainPos.y,
         z: domainPos.z,
-        width: 100,   // x-axis extent
+        width: 20,   // x-axis extent
         height: 50,   // y-axis extent (vertical)
-        depth: 100,   // z-axis extent
+        depth: 20,   // z-axis extent
       };
 
-      const teamItems = teams.map((t) => ({ id: t.id, name: t.name, size: 40 }));
+      const teamItems = teams.map((t) => ({ id: t.id, name: t.name, size: 3 }));
       const teamPositions = calculateTeamTreemap(teamItems, domainBounds);
 
       teams.forEach((team, index) => {
@@ -105,9 +105,9 @@ export async function computeLayout(pool: Pool): Promise<LayoutPositions> {
             x: teamPos.x,
             y: teamPos.y,
             z: teamPos.z,
-            width: 40,   // x-axis extent
+            width: 3,   // x-axis extent
             height: 50,  // y-axis extent (vertical)
-            depth: 40,   // z-axis extent
+            depth: 3,   // z-axis extent
           };
 
           const serviceItems = services.map((s) => ({
