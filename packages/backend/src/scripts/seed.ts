@@ -5,8 +5,17 @@
  * Run with: npm run seed
  */
 
+import { config } from 'dotenv';
 import { createPool, closePool } from '../db/connection.js';
 import { seedDatabase, clearDatabase } from '../db/seed.js';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Load environment variables from packages/backend/.env
+config({ path: join(__dirname, '../../.env') });
 
 async function main() {
   const pool = createPool();

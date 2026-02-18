@@ -78,7 +78,7 @@ export function generateDomains(count: number = 15): GeneratedDomain[] {
   for (let i = 0; i < count; i++) {
     const name = selectedNames[i] || `Domain ${i + 1}`;
     domains.push({
-      id: `domain-${randomUUID()}`,
+      id: randomUUID(),
       name,
       metadata: {
         description: `${name} domain services`,
@@ -105,7 +105,7 @@ export function generateTeamsForDomain(
     const suffix = ['Alpha', 'Beta', 'Core', 'Pro', 'Plus'][i % 5];
     
     teams.push({
-      id: `team-${randomUUID()}`,
+      id: randomUUID(),
       domain_id: domainId,
       name: `${prefix} ${suffix}`,
       metadata: {
@@ -133,7 +133,7 @@ export function generateServicesForTeam(
     const suffix = ['Service', 'API', 'Worker', 'Processor', 'Handler'][i % 5];
     
     services.push({
-      id: `service-${randomUUID()}`,
+      id: randomUUID(),
       team_id: teamId,
       name: `${baseName} ${suffix}`,
       type: SERVICE_TYPES[Math.floor(Math.random() * SERVICE_TYPES.length)],
