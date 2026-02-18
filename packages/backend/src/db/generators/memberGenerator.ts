@@ -124,7 +124,7 @@ function createMember(
   const email = `${name.toLowerCase().replace(/\s+/g, '.')}@company.com`;
 
   return {
-    id: `member-${randomUUID()}`,
+    id: randomUUID(),
     team_id: teamId,
     name,
     role,

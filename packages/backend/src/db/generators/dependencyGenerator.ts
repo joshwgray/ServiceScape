@@ -97,7 +97,7 @@ export function generateDependencies(
             const type: 'DECLARED' | 'OBSERVED' = Math.random() > 0.5 ? 'DECLARED' : 'OBSERVED';
 
             dependencies.push({
-              id: `dependency-${randomUUID()}`,
+              id: randomUUID(),
               from_service_id: service.id,
               to_service_id: targetService,
               type,

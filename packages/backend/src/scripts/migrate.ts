@@ -2,9 +2,14 @@
 import { config } from 'dotenv';
 import { createPool, closePool } from '../db/connection.js';
 import { runMigrations } from '../db/migrate.js';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-// Load environment variables
-config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Load environment variables from packages/backend/.env
+config({ path: join(__dirname, '../../.env') });
 
 async function main() {
   console.log('🔄 Running database migrations...');
