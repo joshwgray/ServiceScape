@@ -12,11 +12,14 @@ interface BuildingProps {
 }
 
 export const Building: React.FC<BuildingProps> = ({ team, position, domainPosition = [0, 0, 0], layout }) => {
-    // Calculate world position for LOD
-    // Building is at 'position' relative to 'domainPosition'
+    // Calculate world position for LOD.
+    // Y uses domain Y only (not + position[1]) so that FloorContainer computes
+    // service relative-Y from domain ground level (absPos.y - domainY), not from
+    // plate-top. The building group is still visually raised to PLATE_TOP via
+    // its 'position' prop; lodPosition Y just drives the service offset math.
     const worldPosition: [number, number, number] = useMemo(() => [
         domainPosition[0] + position[0],
-        domainPosition[1] + position[1],
+        domainPosition[1],
         domainPosition[2] + position[2]
     ], [domainPosition, position]);
     

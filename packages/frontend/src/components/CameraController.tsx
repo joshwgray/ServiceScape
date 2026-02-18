@@ -10,11 +10,16 @@ const CameraController: React.FC = () => {
   useCameraFocus(layout);
 
   return (
-    <OrbitControls 
-      minDistance={10} 
-      maxDistance={800} 
-      maxPolarAngle={Math.PI / 2 - 0.1} // Prevent going below ground
-      makeDefault // Ensure these controls are the default for the scene
+    <OrbitControls
+      minDistance={5}
+      maxDistance={2000}
+      maxPolarAngle={Math.PI / 2 - 0.05}
+      enableDamping
+      dampingFactor={0.06}
+      panSpeed={1.2}
+      rotateSpeed={0.6}
+      screenSpacePanning={false}
+      makeDefault
     />
   );
 };

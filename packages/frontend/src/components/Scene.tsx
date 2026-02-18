@@ -1,4 +1,5 @@
 import React from 'react';
+import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 import { PerspectiveCamera } from '@react-three/drei';
 import Ground from './Ground';
@@ -8,20 +9,44 @@ import DependencyLayer from './DependencyLayer';
 
 const Scene: React.FC = () => {
   return (
-    <Canvas shadows className="canvas-container">
-      <PerspectiveCamera makeDefault position={[100, 100, 100]} />
+    <Canvas
+      shadows
+      className="canvas-container"
+      gl={{ antialias: true }}
+      scene={{ background: new THREE.Color('#E8F4FD') }}
+    >
+      <PerspectiveCamera makeDefault position={[100, 100, 100]} near={0.5} far={5000} />
       <CameraController />
-      <ambientLight intensity={0.5} />
-      <directionalLight 
-        position={[100, 200, 100]} 
-        intensity={1} 
-        castShadow 
-        shadow-mapSize={[2048, 2048]} 
+
+      {/* Bright ambient to eliminate dark undersides */}
+      <ambientLight intensity={0.8} color="#ffffff" />
+
+      {/* Strong key light from upper-left — creates crisp LEGO toy shadows */}
+      <directionalLight
+        position={[150, 300, 100]}
+        intensity={2.0}
+        castShadow
+        shadow-mapSize={[4096, 4096]}
+        shadow-camera-near={1}
+        shadow-camera-far={2000}
+        shadow-camera-left={-300}
+        shadow-camera-right={300}
+        shadow-camera-top={300}
+        shadow-camera-bottom={-300}
+        shadow-bias={-0.0005}
       />
+
+      {/* Soft fill light from opposite side to reduce harsh shadows */}
+      <directionalLight
+        position={[-100, 150, -100]}
+        intensity={0.6}
+        color="#cce8ff"
+      />
+
       <Ground />
       <CityLayout />
       <DependencyLayer />
-      <fog attach="fog" args={['#111', 100, 1000]} />
+      {/* No fog — LEGO toys are photographed in clean studio light */}
     </Canvas>
   );
 };

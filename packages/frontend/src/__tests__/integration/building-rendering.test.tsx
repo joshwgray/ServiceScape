@@ -29,8 +29,8 @@ vi.mock('../../components/Domain', () => ({
     domainRenderCalls.push({ domain, position });
     return (
       <group data-testid="domain" data-domain-id={domain.id} data-position={position?.join(',')}>
-        <mesh data-testid="domain-plane">
-          <planeGeometry args={[100, 100]} />
+        <mesh data-testid="domain-plate">
+          <boxGeometry args={[100, 0.4, 100]} />
         </mesh>
         <div data-testid="domain-name">{domain.name}</div>
       </group>
@@ -172,12 +172,13 @@ describe('Integration: Building Rendering and Positioning', () => {
         expect(screen.queryAllByTestId('domain').length).toBeGreaterThan(0);
       });
 
-      // Verify plane geometry in rendered DOM
-      const planeGeometry = container.querySelector('planegeometry');
-      expect(planeGeometry).toBeInTheDocument();
-      
-      const args = planeGeometry?.getAttribute('args');
-      expect(args).toBe('100,100');
+      // Verify domain plate box geometry in rendered DOM (LegoBaseplate uses boxGeometry)
+      const allBoxGeometries = [...container.querySelectorAll('boxgeometry')];
+      const domainPlate = allBoxGeometries.find(el => {
+        const args = el.getAttribute('args') ?? '';
+        return args.startsWith('100,') && args.endsWith(',100');
+      });
+      expect(domainPlate).toBeInTheDocument();
       
       // THIS TEST WILL FAIL if Domain.tsx is changed back to [20, 20]
     });
@@ -197,11 +198,11 @@ describe('Integration: Building Rendering and Positioning', () => {
         expect(screen.queryAllByTestId('domain').length).toBeGreaterThan(0);
       });
 
-      const planeGeometry = container.querySelector('planegeometry');
-      const args = planeGeometry?.getAttribute('args');
+      const allBoxGeometries = [...container.querySelectorAll('boxgeometry')];
+      const has20x20 = allBoxGeometries.some(el => el.getAttribute('args') === '20,20,20');
       
       // Verify we're NOT using the old 20×20 geometry
-      expect(args).not.toBe('20,20');
+      expect(has20x20).toBe(false);
     });
 
     it('MUST verify layout positions teams for 100×100, not 20×20', async () => {
