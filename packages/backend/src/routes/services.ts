@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import type { Pool } from 'pg';
 import * as organizationService from '../services/organizationService.js';
-import * as serviceRepo from '../repositories/serviceRepository.js';
 
 export const serviceRouter = Router({ mergeParams: true });
 
@@ -25,7 +24,7 @@ serviceRouter.get('/', async (req: Request, res: Response) => {
     }
 
     // Otherwise return all services
-    const allServices = await serviceRepo.getAllServices(pool);
+    const allServices = await organizationService.getAllServices(pool);
     res.json(allServices);
   } catch (error) {
     console.error('Error fetching services:', error);

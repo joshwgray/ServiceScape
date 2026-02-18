@@ -30,14 +30,14 @@ describe('Organization Service', () => {
   });
 
   describe('getDomains', () => {
-    it('should call domainRepository and return domains', async () => {
+    it('should call domainRepository and return domains with camelCase fields', async () => {
       const mockDomains: DbDomain[] = [
         {
           id: 'domain-1',
           name: 'Engineering',
           metadata: {},
-          created_at: new Date(),
-          updated_at: new Date(),
+          created_at: new Date('2024-01-01'),
+          updated_at: new Date('2024-01-02'),
         },
       ];
 
@@ -47,6 +47,10 @@ describe('Organization Service', () => {
       const result = await getDomains(mockPool);
 
       expect(result).toHaveLength(1);
+      expect(result[0]).toHaveProperty('createdAt');
+      expect(result[0]).toHaveProperty('updatedAt');
+      expect(result[0]).not.toHaveProperty('created_at');
+      expect(result[0]).not.toHaveProperty('updated_at');
       expect(domainRepo.getAllDomains).toHaveBeenCalledWith(mockPool);
     });
 
@@ -91,13 +95,13 @@ describe('Organization Service', () => {
   });
 
   describe('getDomainById', () => {
-    it('should call domainRepository and return domain with team count', async () => {
+    it('should call domainRepository and return domain with team count and camelCase fields', async () => {
       const mockDomain: DbDomain = {
         id: 'domain-1',
         name: 'Engineering',
         metadata: {},
-        created_at: new Date(),
-        updated_at: new Date(),
+        created_at: new Date('2024-01-01'),
+        updated_at: new Date('2024-01-02'),
       };
 
       vi.mocked(domainRepo.getDomainById).mockResolvedValue(mockDomain);
@@ -107,6 +111,9 @@ describe('Organization Service', () => {
 
       expect(result).toBeDefined();
       expect(result?.teamCount).toBe(0);
+      expect(result).toHaveProperty('createdAt');
+      expect(result).toHaveProperty('updatedAt');
+      expect(result).not.toHaveProperty('created_at');
       expect(domainRepo.getDomainById).toHaveBeenCalledWith(mockPool, 'domain-1');
     });
 
@@ -120,15 +127,15 @@ describe('Organization Service', () => {
   });
 
   describe('getTeamsByDomain', () => {
-    it('should call teamRepository with correct domainId', async () => {
+    it('should call teamRepository and return teams with camelCase fields', async () => {
       const mockTeams: DbTeam[] = [
         {
           id: 'team-1',
           domain_id: 'domain-1',
           name: 'Backend',
           metadata: {},
-          created_at: new Date(),
-          updated_at: new Date(),
+          created_at: new Date('2024-01-01'),
+          updated_at: new Date('2024-01-02'),
         },
       ];
 
@@ -138,6 +145,11 @@ describe('Organization Service', () => {
       const result = await getTeamsByDomain(mockPool, 'domain-1');
 
       expect(result).toHaveLength(1);
+      expect(result[0]).toHaveProperty('domainId', 'domain-1');
+      expect(result[0]).toHaveProperty('createdAt');
+      expect(result[0]).toHaveProperty('updatedAt');
+      expect(result[0]).not.toHaveProperty('domain_id');
+      expect(result[0]).not.toHaveProperty('created_at');
       expect(teamRepo.getTeamsByDomainId).toHaveBeenCalledWith(mockPool, 'domain-1');
     });
 
@@ -187,14 +199,14 @@ describe('Organization Service', () => {
   });
 
   describe('getTeamById', () => {
-    it('should return team with members', async () => {
+    it('should return team with members and camelCase fields', async () => {
       const mockTeam: DbTeam = {
         id: 'team-1',
         domain_id: 'domain-1',
         name: 'Backend',
         metadata: {},
-        created_at: new Date(),
-        updated_at: new Date(),
+        created_at: new Date('2024-01-01'),
+        updated_at: new Date('2024-01-02'),
       };
 
       const mockMembers: DbMember[] = [
@@ -204,8 +216,8 @@ describe('Organization Service', () => {
           name: 'John Doe',
           role: 'Engineer',
           email: 'john@example.com',
-          created_at: new Date(),
-          updated_at: new Date(),
+          created_at: new Date('2024-01-01'),
+          updated_at: new Date('2024-01-02'),
         },
       ];
 
@@ -216,8 +228,13 @@ describe('Organization Service', () => {
       const result = await getTeamById(mockPool, 'team-1');
 
       expect(result).toBeDefined();
+      expect(result?.domainId).toBe('domain-1');
       expect(result?.members).toHaveLength(1);
+      expect(result?.members?.[0]).toHaveProperty('teamId', 'team-1');
+      expect(result?.members?.[0]).not.toHaveProperty('team_id');
       expect(result?.serviceCount).toBe(0);
+      expect(result).toHaveProperty('createdAt');
+      expect(result).not.toHaveProperty('created_at');
       expect(memberRepo.getMembersByTeamId).toHaveBeenCalledWith(mockPool, 'team-1');
     });
 
@@ -231,7 +248,7 @@ describe('Organization Service', () => {
   });
 
   describe('getServicesByTeam', () => {
-    it('should call serviceRepository with correct teamId', async () => {
+    it('should call serviceRepository and return services with camelCase fields', async () => {
       const mockServices: DbService[] = [
         {
           id: 'service-1',
@@ -240,8 +257,8 @@ describe('Organization Service', () => {
           type: 'REST',
           tier: 'T1',
           metadata: {},
-          created_at: new Date(),
-          updated_at: new Date(),
+          created_at: new Date('2024-01-01'),
+          updated_at: new Date('2024-01-02'),
         },
       ];
 
@@ -252,6 +269,11 @@ describe('Organization Service', () => {
       const result = await getServicesByTeam(mockPool, 'team-1');
 
       expect(result).toHaveLength(1);
+      expect(result[0]).toHaveProperty('teamId', 'team-1');
+      expect(result[0]).toHaveProperty('createdAt');
+      expect(result[0]).toHaveProperty('updatedAt');
+      expect(result[0]).not.toHaveProperty('team_id');
+      expect(result[0]).not.toHaveProperty('created_at');
       expect(serviceRepo.getServicesByTeamId).toHaveBeenCalledWith(mockPool, 'team-1');
     });
 
@@ -289,7 +311,7 @@ describe('Organization Service', () => {
   });
 
   describe('getServiceById', () => {
-    it('should return service with dependency counts', async () => {
+    it('should return service with dependency counts and camelCase fields', async () => {
       const mockService: DbService = {
         id: 'service-1',
         team_id: 'team-1',
@@ -297,8 +319,8 @@ describe('Organization Service', () => {
         type: 'REST',
         tier: 'T1',
         metadata: {},
-        created_at: new Date(),
-        updated_at: new Date(),
+        created_at: new Date('2024-01-01'),
+        updated_at: new Date('2024-01-02'),
       };
 
       vi.mocked(serviceRepo.getServiceById).mockResolvedValue(mockService);
@@ -308,8 +330,13 @@ describe('Organization Service', () => {
       const result = await getServiceById(mockPool, 'service-1');
 
       expect(result).toBeDefined();
+      expect(result?.teamId).toBe('team-1');
       expect(result?.upstreamCount).toBe(2);
       expect(result?.downstreamCount).toBe(4);
+      expect(result).toHaveProperty('createdAt');
+      expect(result).toHaveProperty('updatedAt');
+      expect(result).not.toHaveProperty('team_id');
+      expect(result).not.toHaveProperty('created_at');
       expect(dependencyRepo.getUpstreamDependencyCount).toHaveBeenCalledWith(
         mockPool,
         'service-1'

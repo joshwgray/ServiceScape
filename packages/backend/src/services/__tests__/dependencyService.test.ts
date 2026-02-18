@@ -55,9 +55,22 @@ describe('Dependency Service', () => {
 
       const result = await getServiceDependencies(mockPool, 'service-1');
 
-      expect(result).toEqual({
-        upstream: mockUpstream,
-        downstream: mockDownstream,
+      // Verify structure with camelCase conversion
+      expect(result.upstream).toHaveLength(1);
+      expect(result.upstream[0]).toMatchObject({
+        id: 'dep-1',
+        fromServiceId: 'service-1',
+        toServiceId: 'service-2',
+        type: 'DECLARED',
+        metadata: {},
+      });
+      expect(result.downstream).toHaveLength(1);
+      expect(result.downstream[0]).toMatchObject({
+        id: 'dep-2',
+        fromServiceId: 'service-3',
+        toServiceId: 'service-1',
+        type: 'OBSERVED',
+        metadata: {},
       });
       expect(dependencyRepo.getUpstreamDependencies).toHaveBeenCalledWith(
         mockPool,
@@ -71,11 +84,53 @@ describe('Dependency Service', () => {
       );
     });
 
-    it('should filter by dependency type when provided', async () => {
-      vi.mocked(dependencyRepo.getUpstreamDependencies).mockResolvedValue([]);
+    it('should return dependencies with camelCase properties', async () => {
+      const mockUpstream: DbDependency[] = [
+        {
+          id: 'dep-1',
+          from_service_id: 'service-1',
+          to_service_id: 'service-2',
+          type: 'DECLARED',
+          metadata: { key: 'value' },
+          created_at: new Date('2024-01-01'),
+          updated_at: new Date('2024-01-02'),
+        },
+      ];
+
+      vi.mocked(dependencyRepo.getUpstreamDependencies).mockResolvedValue(mockUpstream);
       vi.mocked(dependencyRepo.getDownstreamDependencies).mockResolvedValue([]);
 
-      await getServiceDependencies(mockPool, 'service-1', 'DECLARED');
+      const result = await getServiceDependencies(mockPool, 'service-1');
+
+      // Verify camelCase conversion
+      expect(result.upstream[0]).toHaveProperty('fromServiceId', 'service-1');
+      expect(result.upstream[0]).toHaveProperty('toServiceId', 'service-2');
+      expect(result.upstream[0]).toHaveProperty('createdAt');
+      expect(result.upstream[0]).toHaveProperty('updatedAt');
+      // Verify no snake_case properties
+      expect(result.upstream[0]).not.toHaveProperty('from_service_id');
+      expect(result.upstream[0]).not.toHaveProperty('to_service_id');
+      expect(result.upstream[0]).not.toHaveProperty('created_at');
+      expect(result.upstream[0]).not.toHaveProperty('updated_at');
+    });
+
+    it('should filter by dependency type when provided', async () => {
+      const mockDeclared: DbDependency[] = [
+        {
+          id: 'dep-declared',
+          from_service_id: 'service-1',
+          to_service_id: 'service-2',
+          type: 'DECLARED',
+          metadata: {},
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      ];
+
+      vi.mocked(dependencyRepo.getUpstreamDependencies).mockResolvedValue(mockDeclared);
+      vi.mocked(dependencyRepo.getDownstreamDependencies).mockResolvedValue([]);
+
+      const result = await getServiceDependencies(mockPool, 'service-1', 'DECLARED');
 
       expect(dependencyRepo.getUpstreamDependencies).toHaveBeenCalledWith(
         mockPool,
@@ -87,6 +142,10 @@ describe('Dependency Service', () => {
         'service-1',
         'DECLARED'
       );
+      // Verify result has camelCase and correct type
+      expect(result.upstream).toHaveLength(1);
+      expect(result.upstream[0].fromServiceId).toBe('service-1');
+      expect(result.upstream[0].type).toBe('DECLARED');
     });
   });
 
@@ -166,7 +225,7 @@ describe('Dependency Service', () => {
 
       // Should only include external upstream dependency (service-1 -> service-3)
       expect(result.upstream).toHaveLength(1);
-      expect(result.upstream[0].to_service_id).toBe('service-3');
+      expect(result.upstream[0].toServiceId).toBe('service-3');
       expect(result.downstream).toHaveLength(0);
     });
 
@@ -246,7 +305,7 @@ describe('Dependency Service', () => {
       // Should only include external downstream dependency (service-3 -> service-1)
       expect(result.upstream).toHaveLength(0);
       expect(result.downstream).toHaveLength(1);
-      expect(result.downstream[0].from_service_id).toBe('service-3');
+      expect(result.downstream[0].fromServiceId).toBe('service-3');
     });
 
   });

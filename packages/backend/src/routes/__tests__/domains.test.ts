@@ -30,16 +30,16 @@ describe('Domain Routes', () => {
           name: 'Engineering',
           metadata: {},
           teamCount: 3,
-          created_at: new Date(),
-          updated_at: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
         {
           id: 'domain-2',
           name: 'Product',
           metadata: {},
           teamCount: 2,
-          created_at: new Date(),
-          updated_at: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
       ];
 
@@ -80,8 +80,8 @@ describe('Domain Routes', () => {
         name: 'Engineering',
         metadata: { description: 'Engineering teams' },
         teamCount: 3,
-        created_at: new Date(),
-        updated_at: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
       vi.mocked(organizationService.getDomainById).mockResolvedValue(mockDomain);

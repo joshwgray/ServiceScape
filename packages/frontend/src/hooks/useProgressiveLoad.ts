@@ -2,10 +2,11 @@ import { useFrame } from '@react-three/fiber';
 import { useVisibilityStore } from '../stores/visibilityStore';
 import * as THREE from 'three';
 import { useRef, useEffect } from 'react';
+import type { Position3D } from '@servicescape/shared';
 
 export interface VisibleObject {
     id: string;
-    position: [number, number, number];
+    position: Position3D;
     radius?: number;
 }
 
@@ -35,7 +36,7 @@ export function useProgressiveLoad(objects: VisibleObject[]) {
         frustum.current.setFromProjectionMatrix(projScreenMatrix.current);
 
         objectsRef.current.forEach(obj => {
-            const pos = new THREE.Vector3(...obj.position);
+            const pos = new THREE.Vector3(obj.position.x, obj.position.y, obj.position.z);
             
             let isVisible = false;
             if (obj.radius) {

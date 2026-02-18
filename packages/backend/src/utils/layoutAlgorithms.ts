@@ -1,25 +1,12 @@
 /**
  * Layout algorithms for 3D positioning of domains, teams, and services
+ * Uses Three.js coordinate convention: x/z ground plane, y vertical
  */
 
-export interface Position3D {
-  x: number;
-  y: number;
-  z: number;
-}
+import type { Position3D, BoundingBox, LayoutItem } from '@servicescape/shared';
 
-export interface BoundingBox extends Position3D {
-  width: number;
-  height: number;
-  depth: number;
-}
-
-export interface LayoutItem {
-  id: string;
-  name: string;
-  size?: number;
-  tier?: string;
-}
+// Re-export types for convenience
+export type { Position3D, BoundingBox, LayoutItem };
 
 /**
  * Check if two bounding boxes collide
@@ -37,7 +24,7 @@ export function checkCollision(box1: BoundingBox, box2: BoundingBox): boolean {
 
 /**
  * Calculate domain positions in a grid layout
- * Places domains on the ground plane (z=0) in a grid pattern
+ * Places domains on the x/z ground plane (y=0) in a grid pattern
  */
 export function calculateDomainGrid(
   domains: LayoutItem[],
@@ -54,8 +41,8 @@ export function calculateDomainGrid(
     
     positions.push({
       x: col * spacing,
-      y: row * spacing,
-      z: 0,
+      y: 0,  // Ground plane is y=0 (Three.js convention)
+      z: row * spacing,  // Use z for depth/rows
     });
   });
   
@@ -64,7 +51,7 @@ export function calculateDomainGrid(
 
 /**
  * Calculate team positions using treemap packing algorithm
- * Places teams within domain bounds using a simple bin packing approach
+ * Places teams within domain bounds on x/z plane (y=0)
  */
 export function calculateTeamTreemap(
   teams: LayoutItem[],
@@ -75,34 +62,45 @@ export function calculateTeamTreemap(
   // Sort teams by size (largest first) for better packing
   const sortedTeams = [...teams].sort((a, b) => (b.size || 50) - (a.size || 50));
   
-  // Simple row-based packing
+  // Create a map to safely track position assignments
+  const positionMap = new Map<string, Position3D>();
+  
+  // Simple row-based packing on x/z plane
   let currentX = domainBounds.x;
-  let currentY = domainBounds.y;
-  let rowHeight = 0;
+  let currentZ = domainBounds.z;
+  let rowDepth = 0;
   
   sortedTeams.forEach((team) => {
     const teamSize = team.size || 50;
     const padding = 5;
     
-    // Check if we need to move to next row
+    // Check if we need to move to next row (along z-axis)
     if (currentX + teamSize > domainBounds.x + domainBounds.width) {
       currentX = domainBounds.x;
-      currentY += rowHeight + padding;
-      rowHeight = 0;
+      currentZ += rowDepth + padding;
+      rowDepth = 0;
     }
     
-    // Find the original index to maintain order
-    const originalIndex = teams.findIndex((t) => t.id === team.id);
-    
-    // Place team
-    positions[originalIndex] = {
+    // Store position in map using team ID
+    positionMap.set(team.id, {
       x: currentX,
-      y: currentY,
-      z: domainBounds.z + 5, // Slightly above domain floor
-    };
+      y: 0,  // Teams at ground level
+      z: currentZ,
+    });
     
     currentX += teamSize + padding;
-    rowHeight = Math.max(rowHeight, teamSize);
+    rowDepth = Math.max(rowDepth, teamSize);
+  });
+  
+  // Build positions array in original order, using map for safe lookups
+  teams.forEach((team) => {
+    const position = positionMap.get(team.id);
+    if (position) {
+      positions.push(position);
+    } else {
+      // Fallback position if ID is missing (shouldn't happen but defensive)
+      positions.push({ x: domainBounds.x, y: 0, z: domainBounds.z });
+    }
   });
   
   return positions;
@@ -110,7 +108,7 @@ export function calculateTeamTreemap(
 
 /**
  * Calculate service positions in a vertical stack
- * Places services vertically within team bounds
+ * Places services vertically (y-axis) within team bounds
  */
 export function calculateServiceStack(
   services: LayoutItem[],
@@ -119,20 +117,21 @@ export function calculateServiceStack(
 ): Position3D[] {
   const positions: Position3D[] = [];
   
-  // Center position within team bounds
+  // Center position on x/z plane
   const centerX = teamBounds.x + teamBounds.width / 2;
-  const centerY = teamBounds.y + teamBounds.height / 2;
+  const centerZ = teamBounds.z + teamBounds.depth / 2;
   
-  let currentZ = teamBounds.z + 10; // Start above team floor
+  const FLOOR_HEIGHT = 0.5;
+  let currentY = teamBounds.y + FLOOR_HEIGHT / 2; // Start with first floor centered at half its height (bottom at ground level)
   
   services.forEach((_service) => {
     positions.push({
       x: centerX,
-      y: centerY,
-      z: currentZ,
+      y: currentY,  // Stack vertically on y-axis
+      z: centerZ,
     });
     
-    currentZ += spacing;
+    currentY += spacing;  // Increment y for vertical stacking
   });
   
   return positions;

@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CityLayout } from '../CityLayout';
 import * as orgContext from '../../contexts/OrganizationContext';
 import * as useProgLoad from '../../hooks/useProgressiveLoad';
@@ -10,7 +10,11 @@ vi.mock('../../hooks/useProgressiveLoad');
 
 // Mock Domain
 vi.mock('../Domain', () => ({
-    Domain: ({ domain }: { domain: any }) => <div data-testid="domain">{domain.name}</div>
+    Domain: ({ domain, position }: { domain: any, position: [number, number, number] }) => (
+        <div data-testid="domain" data-position={position ? position.join(',') : 'undefined'}>
+            {domain.name}
+        </div>
+    )
 }));
 
 // Mock R3F
@@ -24,26 +28,63 @@ describe('CityLayout', () => {
         vi.clearAllMocks();
     });
 
-    it('shows loading state', () => {
+    it('uses layout positions (Position3D objects) for domains', () => {
+        const domains = [{ id: 'd1', name: 'Domain 1' }];
+        const layout = {
+            domains: { 'd1': { x: 100, y: 0, z: 100 } },
+            teams: {},
+            services: {}
+        };
+        
         vi.mocked(orgContext.useOrganization).mockReturnValue({ 
-            loading: true, 
-            domains: [], 
+            loading: false, 
+            domains: domains as any, 
             teams: [],
             services: [],
-            layout: null,
-            error: null
+            layout: layout as any,
+            error: null 
         });
-        vi.mocked(useProgLoad.useProgressiveLoad).mockReturnValue({
-            visible: new Set(),
-            update: vi.fn()
-        } as any);
+
+        vi.mocked(useProgLoad.useProgressiveLoad).mockImplementation(() => {});
 
         render(<CityLayout />);
-        expect(screen.queryByTestId('domain')).toBeNull();
+        
+        const domainElement = screen.getByTestId('domain');
+        expect(domainElement).toHaveTextContent('Domain 1');
+        expect(domainElement).toHaveAttribute('data-position', '100,0,100');
     });
 
-    it('renders domains when loaded', () => {
-        const domains = [{ id: 'd1', name: 'Domain 1', metadata: { position: [10,0,10] } }];
+    it('handles missing layout gracefully with fallback position', () => {
+        const domains = [{ id: 'd1', name: 'Domain 1' }];
+        const layout = {
+            domains: {},
+            teams: {},
+            services: {}
+        };
+        
+        vi.mocked(orgContext.useOrganization).mockReturnValue({ 
+            loading: false, 
+            domains: domains as any, 
+            teams: [],
+            services: [],
+            layout: layout as any,
+            error: null 
+        });
+
+        vi.mocked(useProgLoad.useProgressiveLoad).mockImplementation(() => {});
+
+        render(<CityLayout />);
+        
+        const domainElement = screen.getByTestId('domain');
+        expect(domainElement).toHaveAttribute('data-position', '0,0,0');
+    });
+
+    it('renders with fallback when layout is null', () => {
+        const domains = [
+            { id: 'd1', name: 'Domain 1' },
+            { id: 'd2', name: 'Domain 2' }
+        ];
+        
         vi.mocked(orgContext.useOrganization).mockReturnValue({ 
             loading: false, 
             domains: domains as any, 
@@ -52,46 +93,16 @@ describe('CityLayout', () => {
             layout: null,
             error: null 
         });
-        vi.mocked(useProgLoad.useProgressiveLoad).mockReturnValue({
-            visible: new Set(['d1']),
-            update: vi.fn()
-        } as any);
+
+        vi.mocked(useProgLoad.useProgressiveLoad).mockImplementation(() => {});
 
         render(<CityLayout />);
-        expect(screen.getByTestId('domain')).toHaveTextContent('Domain 1');
-    });
-
-    it('calls progressive load hook with domains', () => {
-        const domains = [
-            { id: 'd1', name: 'Domain 1', metadata: { position: [10,0,10] } }
-        ];
         
-        vi.mocked(orgContext.useOrganization).mockReturnValue({ 
-            loading: false, 
-            domains: domains as any,
-            teams: [],
-            services: [],
-            layout: null,
-            error: null 
-        });
-        vi.mocked(useProgLoad.useProgressiveLoad).mockReturnValue({
-            visible: new Set(['d1']),
-            update: vi.fn()
-        } as any);
-        
-        render(<CityLayout />);
-        
-        // Assert: Check if useProgressiveLoad was called with the correct transformed array
-        expect(useProgLoad.useProgressiveLoad).toHaveBeenCalled();
-        
-        const calls = (useProgLoad.useProgressiveLoad as any).mock.calls;
-        // Find last call
-        const lastCallArgs = calls[calls.length - 1];
-        
-        expect(lastCallArgs[0]).toHaveLength(1);
-        expect(lastCallArgs[0][0]).toMatchObject({
-            id: 'd1',
-            position: [10, 0, 10]
-        });
+        // Should render domains with default positions
+        const domainElements = screen.getAllByTestId('domain');
+        expect(domainElements).toHaveLength(2);
+        expect(domainElements[0]).toHaveAttribute('data-position', '0,0,0');
+        expect(domainElements[1]).toHaveAttribute('data-position', '0,0,0');
     });
 });
+

@@ -122,7 +122,8 @@ describe('seed', () => {
       expect(domainInserts.length).toBeGreaterThan(0);
       domainInserts.forEach(insert => {
         expect(insert.params).toBeDefined();
-        expect(insert.params![0]).toMatch(/^domain-/); // ID starts with 'domain-'
+        expect(typeof insert.params![0]).toBe('string'); // ID is a string (UUID)
+        expect(insert.params![0]).toHaveLength(36); // UUID format
         expect(typeof insert.params![1]).toBe('string'); // name
       });
 
@@ -130,16 +131,20 @@ describe('seed', () => {
       expect(teamInserts.length).toBeGreaterThan(0);
       teamInserts.forEach(insert => {
         expect(insert.params).toBeDefined();
-        expect(insert.params![0]).toMatch(/^team-/); // ID starts with 'team-'
-        expect(insert.params![1]).toMatch(/^domain-/); // domain_id starts with 'domain-'
+        expect(typeof insert.params![0]).toBe('string'); // ID is a string (UUID)
+        expect(insert.params![0]).toHaveLength(36); // UUID format
+        expect(typeof insert.params![1]).toBe('string'); // domain_id is a string (UUID)
+        expect(insert.params![1]).toHaveLength(36); // UUID format
       });
 
       // Verify services reference team IDs
       expect(serviceInserts.length).toBeGreaterThan(0);
       serviceInserts.forEach(insert => {
         expect(insert.params).toBeDefined();
-        expect(insert.params![0]).toMatch(/^service-/); // ID starts with 'service-'
-        expect(insert.params![1]).toMatch(/^team-/); // team_id starts with 'team-'
+        expect(typeof insert.params![0]).toBe('string'); // ID is a string (UUID)
+        expect(insert.params![0]).toHaveLength(36); // UUID format
+        expect(typeof insert.params![1]).toBe('string'); // team_id is a string (UUID)
+        expect(insert.params![1]).toHaveLength(36); // UUID format
       });
     });
 

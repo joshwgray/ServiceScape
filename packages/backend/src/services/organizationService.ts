@@ -4,58 +4,38 @@ import * as teamRepo from '../repositories/teamRepository.js';
 import * as serviceRepo from '../repositories/serviceRepository.js';
 import * as memberRepo from '../repositories/memberRepository.js';
 import * as dependencyRepo from '../repositories/dependencyRepository.js';
+import {
+  convertDomainResponse,
+  convertTeamResponse,
+  convertServiceResponse,
+  convertMemberResponse,
+  type Domain,
+  type Team,
+  type Service,
+  type Member,
+} from '../utils/caseConverters.js';
 
 /**
- * Domain with computed fields
+ * Domain with computed fields (camelCase response type)
  */
-export interface DomainWithMetadata {
-  id: string;
-  name: string;
-  metadata: Record<string, any>;
+export interface DomainWithMetadata extends Domain {
   teamCount: number;
-  created_at: Date;
-  updated_at: Date;
 }
 
 /**
- * Team with computed fields
+ * Team with computed fields (camelCase response type)
  */
-export interface TeamWithMetadata {
-  id: string;
-  domain_id: string | null;
-  name: string;
-  metadata: Record<string, any>;
+export interface TeamWithMetadata extends Team {
   serviceCount: number;
-  members?: MemberInfo[];
-  created_at: Date;
-  updated_at: Date;
+  members?: Member[];
 }
 
 /**
- * Service with computed fields
+ * Service with computed fields (camelCase response type)
  */
-export interface ServiceWithMetadata {
-  id: string;
-  team_id: string | null;
-  name: string;
-  type: string | null;
-  tier: string | null;
-  metadata: Record<string, any>;
+export interface ServiceWithMetadata extends Service {
   upstreamCount: number;
   downstreamCount: number;
-  created_at: Date;
-  updated_at: Date;
-}
-
-/**
- * Member info
- */
-export interface MemberInfo {
-  id: string;
-  team_id: string | null;
-  name: string;
-  role: string;
-  email: string | null;
 }
 
 /**
@@ -67,8 +47,9 @@ export async function getDomains(pool: Pool): Promise<DomainWithMetadata[]> {
   const domainsWithMetadata = await Promise.all(
     domains.map(async (domain) => {
       const teams = await teamRepo.getTeamsByDomainId(pool, domain.id);
+      const convertedDomain = convertDomainResponse(domain);
       return {
-        ...domain,
+        ...convertedDomain,
         teamCount: teams.length,
       };
     })
@@ -91,11 +72,32 @@ export async function getDomainById(
   }
 
   const teams = await teamRepo.getTeamsByDomainId(pool, domain.id);
+  const convertedDomain = convertDomainResponse(domain);
 
   return {
-    ...domain,
+    ...convertedDomain,
     teamCount: teams.length,
   };
+}
+
+/**
+ * Get all teams with service counts
+ */
+export async function getAllTeams(pool: Pool): Promise<TeamWithMetadata[]> {
+  const teams = await teamRepo.getAllTeams(pool);
+
+  const teamsWithMetadata = await Promise.all(
+    teams.map(async (team) => {
+      const services = await serviceRepo.getServicesByTeamId(pool, team.id);
+      const convertedTeam = convertTeamResponse(team);
+      return {
+        ...convertedTeam,
+        serviceCount: services.length,
+      };
+    })
+  );
+
+  return teamsWithMetadata;
 }
 
 /**
@@ -107,8 +109,9 @@ export async function getTeamsByDomain(pool: Pool, domainId: string): Promise<Te
   const teamsWithMetadata = await Promise.all(
     teams.map(async (team) => {
       const services = await serviceRepo.getServicesByTeamId(pool, team.id);
+      const convertedTeam = convertTeamResponse(team);
       return {
-        ...team,
+        ...convertedTeam,
         serviceCount: services.length,
       };
     })
@@ -132,17 +135,39 @@ export async function getTeamById(pool: Pool, id: string): Promise<TeamWithMetad
     serviceRepo.getServicesByTeamId(pool, team.id),
   ]);
 
+  const convertedTeam = convertTeamResponse(team);
+  const convertedMembers = members.map(convertMemberResponse);
+
   return {
-    ...team,
+    ...convertedTeam,
     serviceCount: services.length,
-    members: members.map((m) => ({
-      id: m.id,
-      team_id: m.team_id,
-      name: m.name,
-      role: m.role,
-      email: m.email,
-    })),
+    members: convertedMembers,
   };
+}
+
+/**
+ * Get all services with dependency counts
+ */
+export async function getAllServices(pool: Pool): Promise<ServiceWithMetadata[]> {
+  const services = await serviceRepo.getAllServices(pool);
+
+  const servicesWithMetadata = await Promise.all(
+    services.map(async (service) => {
+      const [upstreamCount, downstreamCount] = await Promise.all([
+        dependencyRepo.getUpstreamDependencyCount(pool, service.id),
+        dependencyRepo.getDownstreamDependencyCount(pool, service.id),
+      ]);
+
+      const convertedService = convertServiceResponse(service);
+      return {
+        ...convertedService,
+        upstreamCount,
+        downstreamCount,
+      };
+    })
+  );
+
+  return servicesWithMetadata;
 }
 
 /**
@@ -161,8 +186,9 @@ export async function getServicesByTeam(
         dependencyRepo.getDownstreamDependencyCount(pool, service.id),
       ]);
 
+      const convertedService = convertServiceResponse(service);
       return {
-        ...service,
+        ...convertedService,
         upstreamCount,
         downstreamCount,
       };
@@ -190,8 +216,10 @@ export async function getServiceById(
     dependencyRepo.getDownstreamDependencyCount(pool, service.id),
   ]);
 
+  const convertedService = convertServiceResponse(service);
+
   return {
-    ...service,
+    ...convertedService,
     upstreamCount,
     downstreamCount,
   };

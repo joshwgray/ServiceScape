@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Domain, Team, Service, Dependency, DependencyType } from '@servicescape/shared';
+import type { Position3D } from '@servicescape/shared';
 
 const apiClient = axios.create({
   baseURL: '/api',
@@ -33,35 +34,16 @@ export const getServices = async (teamId: string) => {
   return response.data;
 };
 
-export interface BackendDependency {
-  id: string;
-  from_service_id: string;
-  to_service_id: string;
-  type: string;
-  metadata?: Record<string, any>;
-}
-
-export interface BackendDependenciesResponse {
-  upstream: BackendDependency[];
-  downstream: BackendDependency[];
-}
-
 export const getDependencies = async (serviceId: string, type?: string): Promise<Dependency[]> => {
   const params = type ? { type } : {};
-  // The backend returns { upstream: [], downstream: [] } with snake_case fields
-  const response = await apiClient.get<BackendDependenciesResponse>(`/services/${serviceId}/dependencies`, { params });
+  // Backend now returns camelCase, so we can use the response directly
+  const response = await apiClient.get<{ upstream: Dependency[]; downstream: Dependency[] }>(
+    `/services/${serviceId}/dependencies`,
+    { params }
+  );
   
   const { upstream, downstream } = response.data;
-  const allDeps = [...upstream, ...downstream];
-
-  // Map to frontend model (camelCase)
-  return allDeps.map((dep) => ({
-    id: dep.id,
-    fromServiceId: dep.from_service_id,
-    toServiceId: dep.to_service_id,
-    type: dep.type as DependencyType,
-    metadata: dep.metadata,
-  }));
+  return [...upstream, ...downstream];
 };
 
 export const getLayout = async () => {
@@ -69,11 +51,10 @@ export const getLayout = async () => {
   return response.data;
 };
 
-export interface Position3D {
-  x: number;
-  y: number;
-  z: number;
-}
+/**
+ * Layout positions returned from /api/layout endpoint
+ * Maps entity IDs to their Position3D coordinates {x, y, z}
+ */
 export interface LayoutPositions {
   domains: Record<string, Position3D>;
   teams: Record<string, Position3D>;
