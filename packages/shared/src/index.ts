@@ -20,6 +20,13 @@ export type {
 } from './types/dependencies';
 export { DEPENDENCY_TYPES } from './types/dependencies';
 
+// Layout types
+export type {
+  Position3D,
+  BoundingBox,
+  LayoutItem,
+} from './types/layout';
+
 // API types
 export type {
   PaginationParams,

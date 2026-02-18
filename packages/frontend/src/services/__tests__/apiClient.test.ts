@@ -39,14 +39,14 @@ describe('apiClient', () => {
     expect(mockInstance.get).toHaveBeenCalledWith('/test');
   });
 
-  it('getDependencies transforms backend response correctly', async () => {
+  it('getDependencies returns backend response with camelCase fields', async () => {
     const mockResponse = {
       data: {
         upstream: [
-          { id: 'dep1', from_service_id: 's1', to_service_id: 's2', type: 'DECLARED', metadata: { foo: 'bar' } }
+          { id: 'dep1', fromServiceId: 's1', toServiceId: 's2', type: 'DECLARED', metadata: { foo: 'bar' } }
         ],
         downstream: [
-          { id: 'dep2', from_service_id: 's3', to_service_id: 's1', type: 'OBSERVED', metadata: {} }
+          { id: 'dep2', fromServiceId: 's3', toServiceId: 's1', type: 'OBSERVED', metadata: {} }
         ]
       }
     };

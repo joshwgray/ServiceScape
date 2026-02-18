@@ -1,11 +1,10 @@
 import type { Pool } from 'pg';
 import type { DbLayoutCache, DbDomain, DbTeam, DbService } from '../db/schema.js';
+import type { Position3D, BoundingBox } from '@servicescape/shared';
 import {
   calculateDomainGrid,
   calculateTeamTreemap,
   calculateServiceStack,
-  type Position3D,
-  type BoundingBox,
 } from '../utils/layoutAlgorithms.js';
 
 export interface LayoutPositions {
@@ -16,6 +15,7 @@ export interface LayoutPositions {
 
 const CACHE_KEY = 'layout_all';
 const CACHE_DURATION_MS = 3600000; // 1 hour
+const CACHE_VERSION = 3; // Increment when layout structure changes
 
 /**
  * Get layout positions, using cache if available
@@ -29,9 +29,12 @@ export async function getLayout(pool: Pool): Promise<LayoutPositions> {
 
   const cachedLayout = cacheResult.rows[0];
 
-  // Check if cache is valid
+  // Check if cache is valid (not expired AND correct version)
   if (cachedLayout && cachedLayout.expires_at) {
-    if (new Date(cachedLayout.expires_at) > new Date()) {
+    const isNotExpired = new Date(cachedLayout.expires_at) > new Date();
+    const hasCorrectVersion = cachedLayout.metadata?.version === CACHE_VERSION;
+    
+    if (isNotExpired && hasCorrectVersion) {
       return cachedLayout.positions as LayoutPositions;
     }
   }
@@ -76,9 +79,9 @@ export async function computeLayout(pool: Pool): Promise<LayoutPositions> {
         x: domainPos.x,
         y: domainPos.y,
         z: domainPos.z,
-        width: 100,
-        height: 100,
-        depth: 50,
+        width: 100,   // x-axis extent
+        height: 50,   // y-axis extent (vertical)
+        depth: 100,   // z-axis extent
       };
 
       const teamItems = teams.map((t) => ({ id: t.id, name: t.name, size: 40 }));
@@ -102,9 +105,9 @@ export async function computeLayout(pool: Pool): Promise<LayoutPositions> {
             x: teamPos.x,
             y: teamPos.y,
             z: teamPos.z,
-            width: 40,
-            height: 40,
-            depth: 50,
+            width: 40,   // x-axis extent
+            height: 50,  // y-axis extent (vertical)
+            depth: 40,   // z-axis extent
           };
 
           const serviceItems = services.map((s) => ({
@@ -112,7 +115,7 @@ export async function computeLayout(pool: Pool): Promise<LayoutPositions> {
             name: s.name,
             tier: s.tier || 'T1',
           }));
-          const servicePositions = calculateServiceStack(serviceItems, teamBounds, 10);
+          const servicePositions = calculateServiceStack(serviceItems, teamBounds, 0.6);
 
           services.forEach((service, index) => {
             positions.services[service.id] = servicePositions[index];
@@ -133,13 +136,14 @@ export async function computeLayout(pool: Pool): Promise<LayoutPositions> {
  */
 async function saveLayoutCache(pool: Pool, positions: LayoutPositions): Promise<void> {
   const expiresAt = new Date(Date.now() + CACHE_DURATION_MS);
+  const metadata = { version: CACHE_VERSION };
 
   await pool.query(
-    `INSERT INTO layout_cache (cache_key, layout_type, positions, expires_at)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO layout_cache (cache_key, layout_type, positions, metadata, expires_at)
+     VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (cache_key)
-     DO UPDATE SET positions = $3, expires_at = $4, updated_at = CURRENT_TIMESTAMP`,
-    [CACHE_KEY, 'DOMAIN_GRID', JSON.stringify(positions), expiresAt]
+     DO UPDATE SET positions = $3, metadata = $4, expires_at = $5, updated_at = CURRENT_TIMESTAMP`,
+    [CACHE_KEY, 'DOMAIN_GRID', JSON.stringify(positions), JSON.stringify(metadata), expiresAt]
   );
 }
 

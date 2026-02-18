@@ -1,12 +1,13 @@
 import type { Pool } from 'pg';
-import type { DbDependency, DependencyType } from '../db/schema.js';
+import type { DependencyType } from '../db/schema.js';
+import { convertDependencyResponse, type Dependency } from '../utils/caseConverters.js';
 import * as dependencyRepo from '../repositories/dependencyRepository.js';
 import * as serviceRepo from '../repositories/serviceRepository.js';
 import * as teamRepo from '../repositories/teamRepository.js';
 
 export interface ServiceDependencies {
-  upstream: DbDependency[];
-  downstream: DbDependency[];
+  upstream: Dependency[];
+  downstream: Dependency[];
 }
 
 /**
@@ -21,8 +22,8 @@ export async function getServiceDependencies(
   const downstream = await dependencyRepo.getDownstreamDependencies(pool, serviceId, type);
 
   return {
-    upstream,
-    downstream,
+    upstream: upstream.map(convertDependencyResponse),
+    downstream: downstream.map(convertDependencyResponse),
   };
 }
 
@@ -39,8 +40,8 @@ export async function getTeamDependencies(
   const services = await serviceRepo.getServicesByTeamId(pool, teamId);
   const serviceIds = services.map((s) => s.id);
 
-  const upstream: DbDependency[] = [];
-  const downstream: DbDependency[] = [];
+  const upstream: Dependency[] = [];
+  const downstream: Dependency[] = [];
 
   // Collect all dependencies for team services
   for (const service of services) {
@@ -52,7 +53,7 @@ export async function getTeamDependencies(
     for (const dep of upstreamDeps) {
       const toService = await serviceRepo.getServiceById(pool, dep.to_service_id);
       if (toService && !serviceIds.includes(toService.id)) {
-        upstream.push(dep);
+        upstream.push(convertDependencyResponse(dep));
       }
     }
 
@@ -60,7 +61,7 @@ export async function getTeamDependencies(
     for (const dep of downstreamDeps) {
       const fromService = await serviceRepo.getServiceById(pool, dep.from_service_id);
       if (fromService && !serviceIds.includes(fromService.id)) {
-        downstream.push(dep);
+        downstream.push(convertDependencyResponse(dep));
       }
     }
   }
@@ -83,8 +84,8 @@ export async function getDomainDependencies(
   // Get all teams for this domain
   const teams = await teamRepo.getTeamsByDomainId(pool, domainId);
   
-  const upstream: DbDependency[] = [];
-  const downstream: DbDependency[] = [];
+  const upstream: Dependency[] = [];
+  const downstream: Dependency[] = [];
 
   // Collect all service IDs for this domain
   const domainServiceIds: string[] = [];
@@ -109,7 +110,7 @@ export async function getDomainDependencies(
           if (toService && toService.team_id) {
             const toTeam = await teamRepo.getTeamById(pool, toService.team_id);
             if (toTeam && toTeam.domain_id !== domainId) {
-              upstream.push(dep);
+              upstream.push(convertDependencyResponse(dep));
             }
           }
         }
@@ -122,7 +123,7 @@ export async function getDomainDependencies(
           if (fromService && fromService.team_id) {
             const fromTeam = await teamRepo.getTeamById(pool, fromService.team_id);
             if (fromTeam && fromTeam.domain_id !== domainId) {
-              downstream.push(dep);
+              downstream.push(convertDependencyResponse(dep));
             }
           }
         }

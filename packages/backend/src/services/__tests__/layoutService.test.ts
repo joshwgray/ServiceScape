@@ -19,13 +19,17 @@ describe('Layout Service', () => {
   });
 
   describe('getLayout', () => {
-    it('should return cached layout if available and not expired', async () => {
+    it('should return cached layout if available and not expired with correct version', async () => {
       const mockCache: DbLayoutCache = {
         id: 'cache-1',
         cache_key: 'layout_all',
         layout_type: 'DOMAIN_GRID',
-        positions: { 'domain-1': { x: 0, y: 0, z: 0 } },
-        metadata: {},
+        positions: {
+          domains: { 'domain-1': { x: 0, y: 0, z: 0 } },
+          teams: {},
+          services: {},
+        },
+        metadata: { version: 3 }, // Correct version (updated for floor cohesion)
         created_at: new Date(),
         updated_at: new Date(),
         expires_at: new Date(Date.now() + 3600000), // 1 hour from now
@@ -46,6 +50,82 @@ describe('Layout Service', () => {
         expect.stringContaining('FROM layout_cache'),
         expect.any(Array)
       );
+    });
+
+    it('should reject cached layout with wrong version', async () => {
+      const mockCacheWrongVersion: DbLayoutCache = {
+        id: 'cache-1',
+        cache_key: 'layout_all',
+        layout_type: 'DOMAIN_GRID',
+        positions: {
+          domains: { 'domain-1': { x: 0, y: 0, z: 0 } },
+          teams: {},
+          services: {},
+        },
+        metadata: { version: 0 }, // Wrong/old version
+        created_at: new Date(),
+        updated_at: new Date(),
+        expires_at: new Date(Date.now() + 3600000), // Not expired
+      };
+
+      const mockDomains: DbDomain[] = [
+        {
+          id: 'domain-1',
+          name: 'Domain 1',
+          metadata: {},
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      ];
+
+      mockQuery
+        .mockResolvedValueOnce({ rows: [mockCacheWrongVersion], command: '', oid: 0, fields: [], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: mockDomains, command: '', oid: 0, fields: [], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [], command: '', oid: 0, fields: [], rowCount: 0 })
+        .mockResolvedValueOnce({ rows: [], command: '', oid: 0, fields: [], rowCount: 0 })
+        .mockResolvedValueOnce({ rows: [], command: '', oid: 0, fields: [], rowCount: 0 });
+
+      const result = await getLayout(mockPool);
+
+      // Should compute new layout, not return cached
+      expect(result).toBeDefined();
+      expect(result.domains).toBeDefined();
+    });
+
+    it('should reject cached layout with missing version', async () => {
+      const mockCacheNoVersion: DbLayoutCache = {
+        id: 'cache-1',
+        cache_key: 'layout_all',
+        layout_type: 'DOMAIN_GRID',
+        positions: { 'domain-1': { x: 0, y: 0, z: 0 } },
+        metadata: {}, // No version field
+        created_at: new Date(),
+        updated_at: new Date(),
+        expires_at: new Date(Date.now() + 3600000), // Not expired
+      };
+
+      const mockDomains: DbDomain[] = [
+        {
+          id: 'domain-1',
+          name: 'Domain 1',
+          metadata: {},
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      ];
+
+      mockQuery
+        .mockResolvedValueOnce({ rows: [mockCacheNoVersion], command: '', oid: 0, fields: [], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: mockDomains, command: '', oid: 0, fields: [], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [], command: '', oid: 0, fields: [], rowCount: 0 })
+        .mockResolvedValueOnce({ rows: [], command: '', oid: 0, fields: [], rowCount: 0 })
+        .mockResolvedValueOnce({ rows: [], command: '', oid: 0, fields: [], rowCount: 0 });
+
+      const result = await getLayout(mockPool);
+
+      // Should compute new layout, not return cached
+      expect(result).toBeDefined();
+      expect(result.domains).toBeDefined();
     });
 
     it('should compute new layout if cache is expired', async () => {

@@ -3,11 +3,9 @@ import request from 'supertest';
 import express, { Express } from 'express';
 import { serviceRouter } from '../services.js';
 import * as organizationService from '../../services/organizationService.js';
-import * as serviceRepo from '../../repositories/serviceRepository.js';
 import type { Pool } from 'pg';
 
 vi.mock('../../services/organizationService.js');
-vi.mock('../../repositories/serviceRepository.js');
 
 describe('Service Routes', () => {
   let app: Express;
@@ -30,27 +28,27 @@ describe('Service Routes', () => {
       const mockServices = [
         {
           id: 'service-1',
-          team_id: 'team-1',
+          teamId: 'team-1',
           name: 'API Service',
           type: 'REST',
           tier: 'T1',
           metadata: {},
           upstreamCount: 2,
           downstreamCount: 3,
-          created_at: new Date(),
-          updated_at: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
         {
           id: 'service-2',
-          team_id: 'team-1',
+          teamId: 'team-1',
           name: 'Database Service',
           type: 'PostgreSQL',
           tier: 'T1',
           metadata: {},
           upstreamCount: 0,
           downstreamCount: 5,
-          created_at: new Date(),
-          updated_at: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
       ];
 
@@ -61,6 +59,8 @@ describe('Service Routes', () => {
       expect(response.status).toBe(200);
       expect(response.body).toHaveLength(2);
       expect(response.body[0].name).toBe('API Service');
+      expect(response.body[0].teamId).toBe('team-1');
+      expect(response.body[0]).not.toHaveProperty('team_id');
       expect(response.body[0].upstreamCount).toBe(2);
       expect(organizationService.getServicesByTeam).toHaveBeenCalledWith(mockPool, 'team-1');
     });
@@ -89,15 +89,15 @@ describe('Service Routes', () => {
     it('should return 200 with service when found', async () => {
       const mockService = {
         id: 'service-1',
-        team_id: 'team-1',
-        name: 'API Service',
+        teamId: 'team-1',
+        name: 'API',
         type: 'REST',
         tier: 'T1',
-        metadata: { version: '1.0' },
-        upstreamCount: 3,
-        downstreamCount: 5,
-        created_at: new Date(),
-        updated_at: new Date(),
+        metadata: { version: '1.0.0' },
+        upstreamCount: 2,
+        downstreamCount: 3,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
       vi.mocked(organizationService.getServiceById).mockResolvedValue(mockService);
@@ -105,9 +105,9 @@ describe('Service Routes', () => {
       const response = await request(app).get('/api/services/service-1');
 
       expect(response.status).toBe(200);
-      expect(response.body.name).toBe('API Service');
-      expect(response.body.upstreamCount).toBe(3);
-      expect(response.body.downstreamCount).toBe(5);
+      expect(response.body.name).toBe('API');
+      expect(response.body.upstreamCount).toBe(2);
+      expect(response.body.downstreamCount).toBe(3);
       expect(organizationService.getServiceById).toHaveBeenCalledWith(mockPool, 'service-1');
     });
 
@@ -132,41 +132,54 @@ describe('Service Routes', () => {
   });
 
   describe('GET /api/services', () => {
-    it('should return all services', async () => {
+    it('should return all services in camelCase', async () => {
       const mockServices = [
         {
           id: 'service-1',
-          team_id: 'team-1',
+          teamId: 'team-1',
           name: 'API Service',
           type: 'REST',
           tier: 'T1',
           metadata: {},
-          created_at: new Date(),
-          updated_at: new Date(),
+          upstreamCount: 2,
+          downstreamCount: 3,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
         {
           id: 'service-2',
-          team_id: 'team-2',
+          teamId: 'team-2',
           name: 'Auth Service',
           type: 'gRPC',
           tier: 'T2',
           metadata: {},
-          created_at: new Date(),
-          updated_at: new Date(),
+          upstreamCount: 1,
+          downstreamCount: 5,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
       ];
 
-      vi.mocked(serviceRepo.getAllServices).mockResolvedValue(mockServices);
+      vi.mocked(organizationService.getAllServices).mockResolvedValue(mockServices);
 
       const response = await request(app).get('/api/services');
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveLength(2);
-      expect(serviceRepo.getAllServices).toHaveBeenCalledWith(mockPool);
+      expect(response.body[0].name).toBe('API Service');
+      expect(response.body[0].teamId).toBe('team-1');
+      expect(response.body[0]).not.toHaveProperty('team_id');
+      expect(response.body[0]).not.toHaveProperty('created_at');
+      expect(response.body[0]).not.toHaveProperty('updated_at');
+      expect(response.body[0]).toHaveProperty('createdAt');
+      expect(response.body[0]).toHaveProperty('updatedAt');
+      expect(response.body[0].upstreamCount).toBe(2);
+      expect(response.body[0].downstreamCount).toBe(3);
+      expect(organizationService.getAllServices).toHaveBeenCalledWith(mockPool);
     });
 
     it('should handle database errors gracefully', async () => {
-      vi.mocked(serviceRepo.getAllServices).mockRejectedValue(new Error('Database error'));
+      vi.mocked(organizationService.getAllServices).mockRejectedValue(new Error('Database error'));
 
       const response = await request(app).get('/api/services');
 

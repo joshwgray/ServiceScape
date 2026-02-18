@@ -4,6 +4,23 @@ import { Domain } from '../Domain';
 import { LODLevel } from '../../utils/lodLevels';
 import * as apiClient from '../../services/apiClient';
 
+// Track BoxGeometry constructor calls
+let boxGeometryCalls: number[][] = [];
+
+// Mock THREE to track BoxGeometry calls
+vi.mock('three', async () => {
+    const actual = await vi.importActual<typeof import('three')>('three');
+    return {
+        ...actual,
+        BoxGeometry: class BoxGeometry extends actual.BoxGeometry {
+            constructor(...args: any[]) {
+                super(...args);
+                boxGeometryCalls.push(args);
+            }
+        }
+    };
+});
+
 // Mock R3F hooks
 vi.mock('@react-three/fiber', () => ({
     useFrame: vi.fn(),
@@ -36,12 +53,22 @@ vi.mock('../../stores/visibilityStore', () => ({
 
 // Mock API
 vi.mock('../../services/apiClient', () => ({
-    getTeams: vi.fn().mockResolvedValue([{ id: 't1', name: 'Team 1' }])
+    getTeams: vi.fn().mockResolvedValue([{ id: 't1', name: 'Team 1', domainId: 'd1' }])
+}));
+
+// Mock Organization Context
+const mockUseOrganization = vi.fn();
+vi.mock('../../contexts/OrganizationContext', () => ({
+    useOrganization: () => mockUseOrganization()
 }));
 
 // Mock Building
+const mockBuildingRender = vi.fn();
 vi.mock('../Building', () => ({
-    Building: () => <div data-testid="building">Building</div>
+    Building: (props: any) => {
+        mockBuildingRender(props);
+        return <div data-testid="building" data-position={props.position?.join(',')}>Building</div>;
+    }
 }));
 
 describe('Domain Component', () => {
@@ -49,8 +76,17 @@ describe('Domain Component', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        boxGeometryCalls = [];
         mockUseLOD.mockReturnValue(LODLevel.FAR);
         mockIsDomainVisible.mockReturnValue(false);
+        mockUseOrganization.mockReturnValue({
+            layout: null,
+            domains: [],
+            teams: [],
+            services: [],
+            loading: false,
+            error: null
+        });
     });
 
     it('renders simple representation at LOD FAR (no buildings)', () => {
@@ -91,6 +127,99 @@ describe('Domain Component', () => {
         
         await waitFor(() => {
             expect(screen.getByTestId('building')).toBeInTheDocument();
+        });
+    });
+
+    it('uses layout.teams Position3D objects for building positions', async () => {
+        mockIsDomainVisible.mockReturnValue(true);
+        mockUseLOD.mockReturnValue(LODLevel.MEDIUM);
+        mockUseOrganization.mockReturnValue({
+            layout: {
+                domains: { 'd1': { x: 100, y: 0, z: 100 } },
+                teams: { 't1': { x: 110, y: 0, z: 105 } },
+                services: {}
+            },
+            domains: [],
+            teams: [],
+            services: [],
+            loading: false,
+            error: null
+        });
+        
+        render(<Domain domain={mockDomain} position={[100, 0, 100]} />);
+        
+        await waitFor(() => {
+            const buildingEl = screen.getByTestId('building');
+            expect(buildingEl).toBeInTheDocument();
+            // Building should be at relative position (10, 0, 5) from domain
+            expect(buildingEl).toHaveAttribute('data-position', '10,0,5');
+        });
+    });
+
+    it('uses fallback circular arrangement when layout.teams is missing', async () => {
+        mockIsDomainVisible.mockReturnValue(true);
+        mockUseLOD.mockReturnValue(LODLevel.MEDIUM);
+        mockUseOrganization.mockReturnValue({
+            layout: {
+                domains: { 'd1': { x: 100, y: 0, z: 100 } },
+                teams: {}, // Empty - no position for t1
+                services: {}
+            },
+            domains: [],
+            teams: [],
+            services: [],
+            loading: false,
+            error: null
+        });
+        
+        render(<Domain domain={mockDomain} position={[100, 0, 100]} />);
+        
+        await waitFor(() => {
+            expect(mockBuildingRender).toHaveBeenCalled();
+            const call = mockBuildingRender.mock.calls[0][0];
+            // Should have some position (fallback circular)
+            expect(call.position).toBeDefined();
+            expect(Array.isArray(call.position)).toBe(true);
+        });
+    });
+
+    describe('Domain geometry sizing', () => {
+        it('renders with correct 100x100 plane geometry', () => {
+            mockIsDomainVisible.mockReturnValue(true);
+            mockUseLOD.mockReturnValue(LODLevel.MEDIUM);
+            
+            const { container } = render(<Domain domain={mockDomain} position={[0,0,0]} />);
+            
+            // Check for planeGeometry with 100x100 args
+            const planeGeometry = container.querySelector('planeGeometry');
+            expect(planeGeometry).toBeInTheDocument();
+            expect(planeGeometry).toHaveAttribute('args', '100,100');
+        });
+
+        it('renders border with correct 100x100 bounds', () => {
+            mockIsDomainVisible.mockReturnValue(true);
+            mockUseLOD.mockReturnValue(LODLevel.MEDIUM);
+            
+            const { container } = render(<Domain domain={mockDomain} position={[0,0,0]} />);
+            
+            // EdgeGeometry should use BoxGeometry with 100x1x100
+            const edgesGeometry = container.querySelector('edgesGeometry');
+            expect(edgesGeometry).toBeInTheDocument();
+            
+            // Verify BoxGeometry was called with correct dimensions [100, 1, 100]
+            expect(boxGeometryCalls).toContainEqual([100, 1, 100]);
+        });
+
+        it('renders FAR LOD box with appropriately scaled dimensions', () => {
+            mockIsDomainVisible.mockReturnValue(false);
+            mockUseLOD.mockReturnValue(LODLevel.FAR);
+            
+            const { container } = render(<Domain domain={mockDomain} position={[0,0,0]} />);
+            
+            // Check for boxGeometry with scaled args [50, 5, 50]
+            const boxGeometry = container.querySelector('boxGeometry');
+            expect(boxGeometry).toBeInTheDocument();
+            expect(boxGeometry).toHaveAttribute('args', '50,5,50');
         });
     });
 });

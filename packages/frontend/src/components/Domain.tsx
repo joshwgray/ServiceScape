@@ -3,7 +3,9 @@ import { Domain as DomainType, Team } from '@servicescape/shared';
 import { useLOD } from '../hooks/useLOD';
 import { LODLevel } from '../utils/lodLevels';
 import { useVisibilityStore } from '../stores/visibilityStore';
+import { useOrganization } from '../contexts/OrganizationContext';
 import { getTeams } from '../services/apiClient';
+import type { LayoutPositions } from '../services/apiClient';
 import { generateColor } from '../utils/colorGenerator';
 import { Building } from './Building.tsx';
 import * as THREE from 'three';
@@ -12,11 +14,16 @@ import { Text } from '@react-three/drei';
 interface DomainProps {
     domain: DomainType;
     position: [number, number, number];
+    layout?: LayoutPositions;
 }
 
-export const Domain: React.FC<DomainProps> = ({ domain, position }) => {
+export const Domain: React.FC<DomainProps> = ({ domain, position, layout: layoutProp }) => {
     const vecPosition = useMemo(() => new THREE.Vector3(...position), [position]);
     const lod = useLOD(vecPosition);
+    const { layout: contextLayout } = useOrganization();
+    
+    // Use prop layout if provided, otherwise use context layout
+    const layout = layoutProp || contextLayout;
     
     // Visibility check using selector
     const isVisible = useVisibilityStore((state) => state.isDomainVisible(domain.id));
@@ -47,7 +54,7 @@ export const Domain: React.FC<DomainProps> = ({ domain, position }) => {
         // Simple Box
         return (
             <mesh position={position}>
-                <boxGeometry args={[10, 5, 10]} />
+                <boxGeometry args={[50, 5, 50]} />
                 <meshStandardMaterial color={color} />
             </mesh>
         );
@@ -58,13 +65,13 @@ export const Domain: React.FC<DomainProps> = ({ domain, position }) => {
         <group position={position}>
             {/* Ground Plane */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-                <planeGeometry args={[20, 20]} />
+                <planeGeometry args={[100, 100]} />
                 <meshStandardMaterial color={color} opacity={0.5} transparent />
             </mesh>
             
             {/* Border */}
             <lineSegments>
-                <edgesGeometry args={[new THREE.BoxGeometry(20, 1, 20)]} />
+                <edgesGeometry args={[new THREE.BoxGeometry(100, 1, 100)]} />
                 <lineBasicMaterial color="white" />
             </lineSegments>
 
@@ -81,21 +88,32 @@ export const Domain: React.FC<DomainProps> = ({ domain, position }) => {
 
             {/* Buildings (Teams) */}
             {teams.map((team, index) => {
-                // Determine position for team/building within domain.
-                // For now, simple grid or random based on index
-                // Assuming team metadata has position or we calculate simple offset.
-                // Let's do simple circle arrangement for now or grid.
-                const offset = 5;
-                const angle = (index / teams.length) * Math.PI * 2;
-                const x = Math.cos(angle) * offset;
-                const z = Math.sin(angle) * offset;
+                let teamPosition: [number, number, number] = [0, 0, 0];
+                
+                if (layout?.teams[team.id]) {
+                    const absPos = layout.teams[team.id];
+                    // Calculate relative position since group is already at domain position
+                    teamPosition = [
+                        absPos.x - position[0],
+                        absPos.y - position[1],
+                        absPos.z - position[2]
+                    ];
+                } else {
+                    // Fallback to circular arrangement if layout missing
+                    const offset = 5;
+                    const angle = (index / teams.length) * Math.PI * 2;
+                    const x = Math.cos(angle) * offset;
+                    const z = Math.sin(angle) * offset;
+                    teamPosition = [x, 0, z];
+                }
                 
                 return (
                     <Building 
                         key={team.id} 
                         team={team} 
-                        position={[x, 0, z]}
+                        position={teamPosition}
                         domainPosition={position}
+                        layout={layout || undefined}
                     />
                 );
             })}

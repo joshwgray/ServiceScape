@@ -28,23 +28,23 @@ describe('Dependency Routes', () => {
         upstream: [
           {
             id: 'dep-1',
-            from_service_id: 'service-2',
-            to_service_id: 'service-1',
+            fromServiceId: 'service-2',
+            toServiceId: 'service-1',
             type: 'DECLARED' as const,
             metadata: {},
-            created_at: now,
-            updated_at: now,
+            createdAt: now,
+            updatedAt: now,
           },
         ],
         downstream: [
           {
             id: 'dep-2',
-            from_service_id: 'service-1',
-            to_service_id: 'service-3',
+            fromServiceId: 'service-1',
+            toServiceId: 'service-3',
             type: 'OBSERVED' as const,
             metadata: {},
-            created_at: now,
-            updated_at: now,
+            createdAt: now,
+            updatedAt: now,
           },
         ],
       };
@@ -57,7 +57,13 @@ describe('Dependency Routes', () => {
       expect(response.body.upstream).toHaveLength(1);
       expect(response.body.downstream).toHaveLength(1);
       expect(response.body.upstream[0].id).toBe('dep-1');
+      expect(response.body.upstream[0].fromServiceId).toBe('service-2');
+      expect(response.body.upstream[0].toServiceId).toBe('service-1');
+      expect(response.body.upstream[0]).not.toHaveProperty('from_service_id');
+      expect(response.body.upstream[0]).not.toHaveProperty('to_service_id');
       expect(response.body.downstream[0].id).toBe('dep-2');
+      expect(response.body.downstream[0].fromServiceId).toBe('service-1');
+      expect(response.body.downstream[0].toServiceId).toBe('service-3');
       expect(dependencyService.getServiceDependencies).toHaveBeenCalledWith(
         mockPool,
         'service-1',
@@ -72,12 +78,12 @@ describe('Dependency Routes', () => {
         downstream: [
           {
             id: 'dep-1',
-            from_service_id: 'service-1',
-            to_service_id: 'service-2',
+            fromServiceId: 'service-1',
+            toServiceId: 'service-2',
             type: 'DECLARED' as const,
             metadata: {},
-            created_at: now,
-            updated_at: now,
+            createdAt: now,
+            updatedAt: now,
           },
         ],
       };
@@ -126,12 +132,12 @@ describe('Dependency Routes', () => {
         upstream: [
           {
             id: 'dep-1',
-            from_service_id: 'service-2',
-            to_service_id: 'service-1',
+            fromServiceId: 'service-2',
+            toServiceId: 'service-1',
             type: 'DECLARED' as const,
             metadata: {},
-            created_at: now,
-            updated_at: now,
+            createdAt: now,
+            updatedAt: now,
           },
         ],
         downstream: [],
@@ -166,12 +172,12 @@ describe('Dependency Routes', () => {
         downstream: [
           {
             id: 'dep-2',
-            from_service_id: 'service-1',
-            to_service_id: 'service-3',
+            fromServiceId: 'service-1',
+            toServiceId: 'service-3',
             type: 'OBSERVED' as const,
             metadata: {},
-            created_at: now,
-            updated_at: now,
+            createdAt: now,
+            updatedAt: now,
           },
         ],
       };

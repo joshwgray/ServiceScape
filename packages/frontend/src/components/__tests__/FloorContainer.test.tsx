@@ -22,7 +22,13 @@ vi.mock('../../hooks/useServiceData', () => ({
 
 // Mock ServiceFloor component
 vi.mock('../ServiceFloor', () => ({
-  ServiceFloor: (props: any) => <div data-testid="service-floor" data-service-id={props.service.id} />
+  ServiceFloor: (props: any) => (
+    <div 
+      data-testid="service-floor" 
+      data-service-id={props.service.id}
+      data-position={props.position.join(',')}
+    />
+  )
 }));
 
 // Mock Three.js - we need to make sure instancedMesh is mocked or reachable
@@ -114,6 +120,69 @@ describe('FloorContainer', () => {
     expect(floors[0]).toHaveAttribute('data-service-id', '1');
     expect(floors[1]).toHaveAttribute('data-service-id', '2');
     expect(floors[2]).toHaveAttribute('data-service-id', '3');
+  });
+
+  it('uses layout.services positions when available in NEAR mode', () => {
+    (useLODModule.useLOD as any).mockReturnValue(LODLevel.NEAR);
+    
+    const mockLayout = {
+      domains: {},
+      teams: {},
+      services: {
+        '1': { x: 0, y: 5, z: 0 },
+        '2': { x: 0, y: 10, z: 0 },
+        '3': { x: 0, y: 15, z: 0 },
+      }
+    };
+    
+    render(
+        <FloorContainer teamId="team1" position={[0, 0, 0]} lodPosition={[0, 0, 0]} layout={mockLayout} />
+    );
+    
+    const floors = screen.getAllByTestId('service-floor');
+    expect(floors[0]).toHaveAttribute('data-position', '0,5,0');
+    expect(floors[1]).toHaveAttribute('data-position', '0,10,0');
+    expect(floors[2]).toHaveAttribute('data-position', '0,15,0');
+  });
+
+  it('converts absolute world positions to relative positions based on lodPosition', () => {
+    (useLODModule.useLOD as any).mockReturnValue(LODLevel.NEAR);
+    
+    // Building is at lodPosition [10, 20, 5]
+    // Services are at absolute world positions
+    const mockLayout = {
+      domains: {},
+      teams: {},
+      services: {
+        '1': { x: 10, y: 25, z: 5 },  // At building center, height 5 above base
+        '2': { x: 12, y: 30, z: 7 },  // Offset by [2, 10, 2] from building base
+        '3': { x: 8, y: 35, z: 3 },   // Offset by [-2, 15, -2] from building base
+      }
+    };
+    
+    render(
+        <FloorContainer teamId="team1" position={[0, 0, 0]} lodPosition={[10, 20, 5]} layout={mockLayout} />
+    );
+    
+    const floors = screen.getAllByTestId('service-floor');
+    // Should be relative to lodPosition [10, 20, 5]
+    expect(floors[0]).toHaveAttribute('data-position', '0,5,0');
+    expect(floors[1]).toHaveAttribute('data-position', '2,10,2');
+    expect(floors[2]).toHaveAttribute('data-position', '-2,15,-2');
+  });
+
+  it('falls back to calculateFloorY when layout is missing', () => {
+    (useLODModule.useLOD as any).mockReturnValue(LODLevel.NEAR);
+    
+    render(
+        <FloorContainer teamId="team1" position={[0, 0, 0]} lodPosition={[0, 0, 0]} />
+    );
+    
+    const floors = screen.getAllByTestId('service-floor');
+    // calculateFloorY(0, 0.5, 0.1) = 0.25, calculateFloorY(1, 0.5, 0.1) = 0.85, calculateFloorY(2, 0.5, 0.1) = 1.45
+    expect(floors[0]).toHaveAttribute('data-position', '0,0.25,0');
+    expect(floors[1]).toHaveAttribute('data-position', '0,0.85,0');
+    expect(floors[2]).toHaveAttribute('data-position', '0,1.45,0');
   });
 
   it('renders instanced mesh in FAR LOD mode and updates matrices', () => {

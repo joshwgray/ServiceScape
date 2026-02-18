@@ -1,8 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-// @ts-ignore
 import { useInteraction } from '../useInteraction';
 import { useSelectionStore } from '../../stores/selectionStore';
+import type { ThreeEvent } from '@react-three/fiber';
+
+// Create a proper mock ThreeEvent type
+type MockThreeEvent<T extends Event> = Partial<ThreeEvent<T>> & {
+  stopPropagation: () => void;
+};
 
 // Mock dependencies
 vi.mock('../../stores/selectionStore', () => ({
@@ -34,11 +39,13 @@ describe('useInteraction', () => {
 
   it('handleClick calls selectService with correct ID', () => {
     const { result } = renderHook(() => useInteraction());
-    const event = { stopPropagation: vi.fn(), point: { x: 0, y: 0, z: 0 } } as any; 
+    const event: MockThreeEvent<MouseEvent> = { 
+      stopPropagation: vi.fn(), 
+      point: { x: 0, y: 0, z: 0 } as any 
+    };
     
     act(() => {
-      // @ts-ignore
-      result.current.handleClick('service-123')(event);
+      result.current.handleClick('service-123')(event as ThreeEvent<MouseEvent>);
     });
 
     expect(event.stopPropagation).toHaveBeenCalled();
@@ -47,11 +54,10 @@ describe('useInteraction', () => {
 
   it('handlePointerOver sets hover state', () => {
     const { result } = renderHook(() => useInteraction());
-    const event = { stopPropagation: vi.fn() } as any;
+    const event: MockThreeEvent<PointerEvent> = { stopPropagation: vi.fn() };
 
     act(() => {
-      // @ts-ignore
-      result.current.handlePointerOver('service-123')(event);
+      result.current.handlePointerOver('service-123')(event as ThreeEvent<PointerEvent>);
     });
     
     expect(event.stopPropagation).toHaveBeenCalled();
@@ -60,20 +66,94 @@ describe('useInteraction', () => {
 
   it('handlePointerOut clears hover state', () => {
     const { result } = renderHook(() => useInteraction());
-    const event = { stopPropagation: vi.fn() } as any;
+    const event: MockThreeEvent<PointerEvent> = { stopPropagation: vi.fn() };
 
     act(() => {
-      // @ts-ignore
-      result.current.handlePointerOver('service-123')(event);
+      result.current.handlePointerOver('service-123')(event as ThreeEvent<PointerEvent>);
     });
     expect(result.current.hoveredId).toBe('service-123');
 
     act(() => {
-      // @ts-ignore
-      result.current.handlePointerOut(event);
+      result.current.handlePointerOut(event as ThreeEvent<PointerEvent>);
     });
     
     expect(event.stopPropagation).toHaveBeenCalled();
     expect(result.current.hoveredId).toBeNull();
+  });
+
+  it('handleBackgroundClick clears selection', () => {
+    const { result } = renderHook(() => useInteraction());
+    const event: MockThreeEvent<MouseEvent> = { stopPropagation: vi.fn() };
+
+    act(() => {
+      result.current.handleBackgroundClick(event as ThreeEvent<MouseEvent>);
+    });
+
+    expect(event.stopPropagation).toHaveBeenCalled();
+    expect(mockClearSelection).toHaveBeenCalled();
+  });
+
+  it('click on positioned mesh triggers selection with correct ID', () => {
+    const { result } = renderHook(() => useInteraction());
+    
+    // Simulate clicking on a service floor at a specific position
+    const clickEvent: MockThreeEvent<MouseEvent> = {
+      stopPropagation: vi.fn(),
+      point: { x: 20, y: 5, z: 25 } as any,
+      object: { userData: { serviceId: 'service-positioned' } } as any,
+    };
+
+    act(() => {
+      result.current.handleClick('service-positioned')(clickEvent as ThreeEvent<MouseEvent>);
+    });
+
+    expect(clickEvent.stopPropagation).toHaveBeenCalled();
+    expect(mockSelectService).toHaveBeenCalledWith('service-positioned');
+  });
+
+  it('hover on positioned mesh sets correct hover state', () => {
+    const { result } = renderHook(() => useInteraction());
+    
+    // Simulate hovering over a service floor at a specific position
+    const hoverEvent: MockThreeEvent<PointerEvent> = {
+      stopPropagation: vi.fn(),
+      point: { x: 20, y: 5, z: 25 } as any,
+    };
+
+    act(() => {
+      result.current.handlePointerOver('service-positioned')(hoverEvent as ThreeEvent<PointerEvent>);
+    });
+
+    expect(hoverEvent.stopPropagation).toHaveBeenCalled();
+    expect(result.current.hoveredId).toBe('service-positioned');
+    expect(document.body.style.cursor).toBe('pointer');
+  });
+
+  it('resets cursor on unmount', () => {
+    const { unmount } = renderHook(() => useInteraction());
+    
+    // Set cursor to pointer
+    document.body.style.cursor = 'pointer';
+    
+    unmount();
+    
+    // Cursor should be reset to auto
+    expect(document.body.style.cursor).toBe('auto');
+  });
+
+  it('handles multiple rapid hover events correctly', () => {
+    const { result } = renderHook(() => useInteraction());
+    const event1: MockThreeEvent<PointerEvent> = { stopPropagation: vi.fn() };
+    const event2: MockThreeEvent<PointerEvent> = { stopPropagation: vi.fn() };
+
+    act(() => {
+      result.current.handlePointerOver('service-1')(event1 as ThreeEvent<PointerEvent>);
+    });
+    expect(result.current.hoveredId).toBe('service-1');
+
+    act(() => {
+      result.current.handlePointerOver('service-2')(event2 as ThreeEvent<PointerEvent>);
+    });
+    expect(result.current.hoveredId).toBe('service-2');
   });
 });

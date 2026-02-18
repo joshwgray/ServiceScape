@@ -2,7 +2,6 @@ import { Router, Request, Response } from 'express';
 import type { Pool } from 'pg';
 import type { DependencyType } from '../db/schema.js';
 import * as organizationService from '../services/organizationService.js';
-import * as teamRepo from '../repositories/teamRepository.js';
 import * as dependencyService from '../services/dependencyService.js';
 
 export const teamRouter = Router({ mergeParams: true });
@@ -24,7 +23,7 @@ teamRouter.get('/', async (req: Request, res: Response) => {
     }
 
     // Return all teams if no domainId
-    const teams = await teamRepo.getAllTeams(pool);
+    const teams = await organizationService.getAllTeams(pool);
     res.json(teams);
   } catch (error) {
     console.error('Error fetching teams:', error);
