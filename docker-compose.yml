@@ -5,9 +5,9 @@ services:
     image: postgres:15
     container_name: servicescape-db
     environment:
-      POSTGRES_DB: servicescape
-      POSTGRES_USER: servicescape_user
-      POSTGRES_PASSWORD: servicescape_pass
+      POSTGRES_DB: ${POSTGRES_DB:-servicescape}
+      POSTGRES_USER: ${POSTGRES_USER:-servicescape_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-servicescape_pass}
     ports:
       - "5432:5432"
     volumes:

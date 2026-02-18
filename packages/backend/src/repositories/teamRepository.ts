@@ -20,6 +20,14 @@ export async function getTeamsByDomainId(pool: Pool, domainId: string): Promise<
 }
 
 /**
+ * Get all teams
+ */
+export async function getAllTeams(pool: Pool): Promise<DbTeam[]> {
+  const result = await pool.query<DbTeam>('SELECT * FROM teams ORDER BY name');
+  return result.rows;
+}
+
+/**
  * Get a single team by ID
  */
 export async function getTeamById(pool: Pool, id: string): Promise<DbTeam | null> {

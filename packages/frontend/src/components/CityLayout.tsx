@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useOrganizationData } from '../hooks/useOrganizationData';
+import { useOrganization } from '../contexts/OrganizationContext';
 import { useProgressiveLoad, VisibleObject } from '../hooks/useProgressiveLoad';
 import { Domain } from './Domain';
 
@@ -7,7 +7,7 @@ import { Domain } from './Domain';
 const DEFAULT_POSITION: [number, number, number] = [0, 0, 0];
 
 export const CityLayout: React.FC = () => {
-    const { domains, loading, error } = useOrganizationData();
+    const { domains, loading, error } = useOrganization();
     
     // Transform domains for progressive load tracking
     const visibleObjects = useMemo<VisibleObject[]>(() => {
