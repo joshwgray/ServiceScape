@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: servicescape-prod-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-servicescape}
+      POSTGRES_USER: ${POSTGRES_USER:-servicescape_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-defaultForDev}
+    volumes:
+      - postgres_pd_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U servicescape_user -d servicescape"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - servicescape-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: packages/backend/Dockerfile
+    container_name: servicescape-prod-backend
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-3000}
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-servicescape_user}
+      DB_PASSWORD: ${DB_PASSWORD:-defaultForDev}
+      DB_NAME: ${DB_NAME:-servicescape}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - servicescape-net
+    command: sh -c "node dist/scripts/migrate.js && node dist/index.js"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: packages/frontend/Dockerfile
+    container_name: servicescape-prod-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    networks:
+      - servicescape-net
+
+networks:
+  servicescape-net:
+    driver: bridge
+
+volumes:
+  postgres_pd_data:

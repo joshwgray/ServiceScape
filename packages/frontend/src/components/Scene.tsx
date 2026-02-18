@@ -4,6 +4,7 @@ import { PerspectiveCamera } from '@react-three/drei';
 import Ground from './Ground';
 import CameraController from './CameraController';
 import { CityLayout } from './CityLayout';
+import DependencyLayer from './DependencyLayer';
 
 const Scene: React.FC = () => {
   return (
@@ -19,6 +20,7 @@ const Scene: React.FC = () => {
       />
       <Ground />
       <CityLayout />
+      <DependencyLayer />
       <fog attach="fog" args={['#111', 100, 1000]} />
     </Canvas>
   );

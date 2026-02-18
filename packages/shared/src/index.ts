@@ -18,6 +18,7 @@ export type {
   Dependency,
   DependencyType,
 } from './types/dependencies';
+export { DEPENDENCY_TYPES } from './types/dependencies';
 
 // API types
 export type {

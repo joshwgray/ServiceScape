@@ -26,6 +26,14 @@ app.get('/health', (_req: Request, res: Response) => {
 // API routes
 const apiRouter = express.Router();
 
+// API Health check endpoint
+apiRouter.get('/health', (_req: Request, res: Response) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Test route for error handling (development only)
 if (process.env.NODE_ENV !== 'production') {
   apiRouter.get('/throw-error', (_req: Request, _res: Response) => {

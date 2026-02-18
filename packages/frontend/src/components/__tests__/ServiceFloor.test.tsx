@@ -16,7 +16,6 @@ describe('ServiceFloor', () => {
     name: 'Test Service',
     teamId: 'team1',
     description: 'A test service',
-    tier: 'gold',
     metadata: {}
   };
 

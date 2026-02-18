@@ -3,8 +3,17 @@ import React, { useMemo } from 'react';
 import { Service } from '@servicescape/shared';
 import { Text } from '@react-three/drei';
 import { generateColor } from '../utils/colorGenerator';
+import { useSelectionStore } from '../stores/selectionStore';
+import { useInteraction } from '../hooks/useInteraction';
+import { tokens } from '../styles/tokens';
 
-interface ServiceFloorProps {
+const SERVICE_WIDTH = 1.8;
+const SERVICE_DEPTH = 1.8;
+const TEXT_Z_OFFSET = 0.9;
+const TEXT_Y_OFFSET_FACTOR = 0.5;
+const TEXT_Y_OFFSET_FIXED = 0.1;
+
+export interface ServiceFloorProps {
   service: Service;
   position: [number, number, number];
   height?: number;
@@ -12,16 +21,30 @@ interface ServiceFloorProps {
 
 export const ServiceFloor: React.FC<ServiceFloorProps> = ({ service, position, height = 1 }) => {
   const color = useMemo(() => generateColor(service.id), [service.id]);
+  const selectedServiceId = useSelectionStore((state) => state.selectedServiceId);
+  const { handleClick, handlePointerOver, handlePointerOut, hoveredId } = useInteraction();
+  
+  const isSelected = selectedServiceId === service.id;
+  const isHovered = hoveredId === service.id;
+  
+  let displayColor = color;
+  if (isSelected) displayColor = tokens.colors.primary;
+  if (isHovered && !isSelected) displayColor = tokens.colors.primaryHover;
 
   return (
-    <group position={position}>
+    <group 
+      position={position} 
+      onClick={handleClick(service.id)}
+      onPointerOver={handlePointerOver(service.id)}
+      onPointerOut={handlePointerOut}
+    >
       {/* Service Geometry: Box */}
       <mesh castShadow receiveShadow>
-        <boxGeometry args={[1.8, height, 1.8]} />
-        <meshStandardMaterial color={color} />
+        <boxGeometry args={[SERVICE_WIDTH, height, SERVICE_DEPTH]} />
+        <meshStandardMaterial color={displayColor} />
       </mesh>
       <Text
-        position={[0, height / 2 + 0.1, 0.9]}
+        position={[0, height * TEXT_Y_OFFSET_FACTOR + TEXT_Y_OFFSET_FIXED, TEXT_Z_OFFSET]}
         fontSize={0.2}
         color="black"
         anchorX="center"
