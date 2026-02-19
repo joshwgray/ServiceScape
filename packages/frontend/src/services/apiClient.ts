@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Domain, Team, Service, Dependency, DependencyType } from '@servicescape/shared';
+import { Domain, Team, Service, Dependency } from '@servicescape/shared';
 import type { Position3D } from '@servicescape/shared';
 
 const apiClient = axios.create({

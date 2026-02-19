@@ -8,6 +8,7 @@ export const tokens = {
     backgroundOverlay: 'rgba(34, 34, 34, 0.9)',
     backgroundCode: 'rgba(0,0,0,0.2)',
     surface: '#444',
+    surfaceHighlight: '#555555',
     border: '#444',
     borderSubtle: '#333',
     text: {

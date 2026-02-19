@@ -43,4 +43,40 @@ describe('DetailsPanel', () => {
         expect(screen.getByText('3')).toBeInTheDocument();
         expect(screen.getByText('Downstream')).toBeInTheDocument();
     });
+
+    it('renders links if provided', () => {
+        const item: any = {
+            id: '1',
+            name: 'Service with Links',
+            links: [
+                { label: 'Documentation', url: 'http://docs.example.com' },
+                { label: 'Repo', url: 'http://git.example.com' }
+            ]
+        };
+
+        render(<DetailsPanel item={item} />);
+
+        const docLink = screen.getByText('Documentation');
+        expect(docLink).toBeInTheDocument();
+        expect(docLink.closest('a')).toHaveAttribute('href', 'http://docs.example.com');
+
+        const repoLink = screen.getByText('Repo');
+        expect(repoLink).toBeInTheDocument();
+        expect(repoLink.closest('a')).toHaveAttribute('href', 'http://git.example.com');
+    });
+
+    it('renders tiers as tags', () => {
+        const item: any = {
+            id: '1',
+            name: 'Tiered Service',
+            tiers: ['Gold', 'Critical']
+        };
+
+        render(<DetailsPanel item={item} />);
+
+        expect(screen.getByText('Tiers')).toBeInTheDocument();
+        expect(screen.getByText('Gold')).toBeInTheDocument();
+        expect(screen.getByText('Critical')).toBeInTheDocument();
+    });
 });
+

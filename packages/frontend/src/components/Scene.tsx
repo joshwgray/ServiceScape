@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 import { PerspectiveCamera } from '@react-three/drei';
 import Ground from './Ground';
+import { TreeLayer } from './TreeLayer';
 import CameraController from './CameraController';
 import { CityLayout } from './CityLayout';
 import DependencyLayer from './DependencyLayer';
@@ -44,6 +45,7 @@ const Scene: React.FC = () => {
       />
 
       <Ground />
+      <TreeLayer />
       <CityLayout />
       <DependencyLayer />
       {/* No fog — LEGO toys are photographed in clean studio light */}

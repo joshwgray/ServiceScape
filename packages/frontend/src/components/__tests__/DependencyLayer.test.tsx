@@ -32,7 +32,6 @@ vi.mock('../DependencyEdge', () => ({
 import { useSelectionStore } from '../../stores/selectionStore';
 import { useDependencies } from '../../hooks/useDependencies';
 import { useOrganization } from '../../contexts/OrganizationContext';
-import DependencyEdge from '../DependencyEdge';
 
 describe('DependencyLayer', () => {
   const mockServices: Service[] = [
