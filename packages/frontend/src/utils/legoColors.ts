@@ -1,15 +1,18 @@
 // Authentic LEGO brick colors (used for service/team bricks)
+export const LEGO_COLOR_BRIGHT_GREEN = '#00A650';
+export const LEGO_COLOR_REDDISH_BROWN = '#A05F35';
+
 export const LEGO_BRICK_COLORS: readonly string[] = [
   '#C91A09', // Bright Red
   '#FFD700', // Bright Yellow
   '#006CB7', // Bright Blue
-  '#00A650', // Bright Green
+  LEGO_COLOR_BRIGHT_GREEN, // Bright Green
   '#F47B20', // Bright Orange
   '#FFFFFF', // White
   '#05131D', // Black
   '#9BA19D', // Medium Stone Grey
   '#6C6E68', // Dark Stone Grey
-  '#A05F35', // Reddish Brown
+  LEGO_COLOR_REDDISH_BROWN, // Reddish Brown
   '#FF69B4', // Bright Pink (Light Purple-ish)
   '#00BCD4', // Medium Azure
   '#FFA500', // Flame Yellowish Orange

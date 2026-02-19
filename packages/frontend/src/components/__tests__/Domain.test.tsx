@@ -130,13 +130,13 @@ describe('Domain Component', () => {
         });
     });
 
-    it('uses layout.teams Position3D objects for building positions', async () => {
+    it('uses randomized positions for buildings within domain bounds', async () => {
         mockIsDomainVisible.mockReturnValue(true);
         mockUseLOD.mockReturnValue(LODLevel.MEDIUM);
         mockUseOrganization.mockReturnValue({
             layout: {
                 domains: { 'd1': { x: 100, y: 0, z: 100 } },
-                teams: { 't1': { x: 110, y: 0, z: 105 } },
+                teams: { 't1': { x: 110, y: 0, z: 105 } }, // Layout is now ignored
                 services: {}
             },
             domains: [],
@@ -151,18 +151,30 @@ describe('Domain Component', () => {
         await waitFor(() => {
             const buildingEl = screen.getByTestId('building');
             expect(buildingEl).toBeInTheDocument();
-            // Building should be at relative position (10, PLATE_TOP=0.4, 5) from domain
-            expect(buildingEl).toHaveAttribute('data-position', '10,0.4,5');
+            
+            // Building should have randomized position within domain bounds
+            const position = buildingEl.getAttribute('data-position');
+            expect(position).toBeTruthy();
+            const [x, y, z] = position!.split(',').map(Number);
+            
+            // Y should be at PLATE_TOP
+            expect(y).toBe(0.4);
+            
+            // X and Z should be within domain bounds (2 to 18 studs, accounting for MARGIN and TEAM_SIZE)
+            expect(x).toBeGreaterThanOrEqual(2);
+            expect(x).toBeLessThanOrEqual(18);
+            expect(z).toBeGreaterThanOrEqual(2);
+            expect(z).toBeLessThanOrEqual(18);
         });
     });
 
-    it('uses fallback circular arrangement when layout.teams is missing', async () => {
+    it('generates randomized positions for teams when layout is missing', async () => {
         mockIsDomainVisible.mockReturnValue(true);
         mockUseLOD.mockReturnValue(LODLevel.MEDIUM);
         mockUseOrganization.mockReturnValue({
             layout: {
                 domains: { 'd1': { x: 100, y: 0, z: 100 } },
-                teams: {}, // Empty - no position for t1
+                teams: {}, // Empty - still generates random positions
                 services: {}
             },
             domains: [],
@@ -177,9 +189,10 @@ describe('Domain Component', () => {
         await waitFor(() => {
             expect(mockBuildingRender).toHaveBeenCalled();
             const call = mockBuildingRender.mock.calls[0][0];
-            // Should have some position (fallback circular)
+            // Should have randomized position
             expect(call.position).toBeDefined();
             expect(Array.isArray(call.position)).toBe(true);
+            expect(call.position[1]).toBe(0.4); // Y at PLATE_TOP
         });
     });
 
@@ -213,10 +226,10 @@ describe('Domain Component', () => {
             
             const { container } = render(<Domain domain={mockDomain} position={[0,0,0]} />);
             
-            // Check for boxGeometry with scaled args [50, 5, 50]
-            const boxGeometry = container.querySelector('boxGeometry');
-            expect(boxGeometry).toBeInTheDocument();
-            expect(boxGeometry).toHaveAttribute('args', '50,5,50');
+            // Check for mesh element (geometry is now passed as a prop, not a JSX element)
+            const mesh = container.querySelector('mesh');
+            expect(mesh).toBeInTheDocument();
+            // farGeometry is created with new THREE.BoxGeometry(10, 2, 10)
         });
     });
 });

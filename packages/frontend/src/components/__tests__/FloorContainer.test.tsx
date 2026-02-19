@@ -122,17 +122,13 @@ describe('FloorContainer', () => {
     expect(floors[2]).toHaveAttribute('data-service-id', '3');
   });
 
-  it('uses layout.services positions when available in NEAR mode', () => {
+  it('stacks floors directly on top of each other in NEAR mode', () => {
     (useLODModule.useLOD as any).mockReturnValue(LODLevel.NEAR);
     
     const mockLayout = {
       domains: {},
       teams: {},
-      services: {
-        '1': { x: 0, y: 5, z: 0 },
-        '2': { x: 0, y: 10, z: 0 },
-        '3': { x: 0, y: 15, z: 0 },
-      }
+      services: {}
     };
     
     render(
@@ -140,24 +136,30 @@ describe('FloorContainer', () => {
     );
     
     const floors = screen.getAllByTestId('service-floor');
-    expect(floors[0]).toHaveAttribute('data-position', '0,5,0');
-    expect(floors[1]).toHaveAttribute('data-position', '0,10,0');
-    expect(floors[2]).toHaveAttribute('data-position', '0,15,0');
+    
+    // Verify floors are stacked directly on top of each other (no horizontal offset)
+    floors.forEach((floor, index) => {
+      const position = floor.getAttribute('data-position');
+      expect(position).toBeTruthy();
+      const [x, y, z] = position!.split(',').map(Number);
+      
+      // Y should match floor heights (deterministic)
+      const expectedY = 0.25 + index * 0.6; // FLOOR_HEIGHT/2 + index * (FLOOR_HEIGHT + FLOOR_SPACING)
+      expect(y).toBeCloseTo(expectedY, 1);
+      
+      // X and Z should be 0 (floors stack directly)
+      expect(x).toBe(0);
+      expect(z).toBe(0);
+    });
   });
 
-  it('converts absolute world positions to relative positions based on lodPosition', () => {
+  it('generates consistent positions for services regardless of LOD position', () => {
     (useLODModule.useLOD as any).mockReturnValue(LODLevel.NEAR);
     
-    // Building is at lodPosition [10, 20, 5]
-    // Services are at absolute world positions
     const mockLayout = {
       domains: {},
       teams: {},
-      services: {
-        '1': { x: 10, y: 25, z: 5 },  // At building center, height 5 above base
-        '2': { x: 12, y: 30, z: 7 },  // Offset by [2, 10, 2] from building base
-        '3': { x: 8, y: 35, z: 3 },   // Offset by [-2, 15, -2] from building base
-      }
+      services: {}
     };
     
     render(
@@ -165,13 +167,21 @@ describe('FloorContainer', () => {
     );
     
     const floors = screen.getAllByTestId('service-floor');
-    // Should be relative to lodPosition [10, 20, 5]
-    expect(floors[0]).toHaveAttribute('data-position', '0,5,0');
-    expect(floors[1]).toHaveAttribute('data-position', '2,10,2');
-    expect(floors[2]).toHaveAttribute('data-position', '-2,15,-2');
+    
+    // Verify positions are consistent (floors stack directly)
+    floors.forEach((floor, index) => {
+      const position = floor.getAttribute('data-position');
+      expect(position).toBeTruthy();
+      const [x, y, z] = position!.split(',').map(Number);
+      
+      const expectedY = 0.25 + index * 0.6;
+      expect(y).toBeCloseTo(expectedY, 1);
+      expect(x).toBe(0);
+      expect(z).toBe(0);
+    });
   });
 
-  it('falls back to calculateFloorY when layout is missing', () => {
+  it('uses calculateFloorY for vertical positioning with no horizontal offset', () => {
     (useLODModule.useLOD as any).mockReturnValue(LODLevel.NEAR);
     
     render(
@@ -179,10 +189,21 @@ describe('FloorContainer', () => {
     );
     
     const floors = screen.getAllByTestId('service-floor');
-    // calculateFloorY(0, 0.5, 0.1) = 0.25, calculateFloorY(1, 0.5, 0.1) = 0.85, calculateFloorY(2, 0.5, 0.1) = 1.45
-    expect(floors[0]).toHaveAttribute('data-position', '0,0.25,0');
-    expect(floors[1]).toHaveAttribute('data-position', '0,0.85,0');
-    expect(floors[2]).toHaveAttribute('data-position', '0,1.45,0');
+    
+    // Verify Y uses calculateFloorY (deterministic), X/Z are 0 (direct stacking)
+    floors.forEach((floor, index) => {
+      const position = floor.getAttribute('data-position');
+      expect(position).toBeTruthy();
+      const [x, y, z] = position!.split(',').map(Number);
+      
+      // calculateFloorY(index, 0.5, 0.1) = 0.25 + index * 0.6
+      const expectedY = 0.25 + index * 0.6;
+      expect(y).toBeCloseTo(expectedY, 1);
+      
+      // X and Z should be 0 (floors stack directly)
+      expect(x).toBe(0);
+      expect(z).toBe(0);
+    });
   });
 
   it('renders instanced mesh in FAR LOD mode and updates matrices', () => {

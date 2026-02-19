@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import * as THREE from 'three';
 import {
   LEGO_STUD_RADIUS,
   LEGO_STUD_HEIGHT,
@@ -28,12 +29,13 @@ export const LegoBrick: React.FC<LegoBrickProps> = ({
 }) => {
   const studPositions = getStudPositions(studVariant, width, depth);
   const material = useMemo(() => createLegoPlasticMaterial({ color }), [color]);
+  const brickGeometry = useMemo(() => new THREE.BoxGeometry(width, height, depth), [width, height, depth]);
+  const studGeometry = useMemo(() => new THREE.CylinderGeometry(LEGO_STUD_RADIUS, LEGO_STUD_RADIUS, LEGO_STUD_HEIGHT, 16), []);
 
   return (
     <group>
       {/* Brick body */}
-      <mesh castShadow={castShadow} receiveShadow={receiveShadow}>
-        <boxGeometry args={[width, height, depth]} />
+      <mesh castShadow={castShadow} receiveShadow={receiveShadow} geometry={brickGeometry}>
         <primitive object={material} attach="material" />
       </mesh>
 
@@ -42,10 +44,10 @@ export const LegoBrick: React.FC<LegoBrickProps> = ({
         <mesh
           key={index}
           position={[x, height / 2 + LEGO_STUD_HEIGHT / 2, z]}
+          geometry={studGeometry}
           castShadow={castShadow}
           receiveShadow={receiveShadow}
         >
-          <cylinderGeometry args={[LEGO_STUD_RADIUS, LEGO_STUD_RADIUS, LEGO_STUD_HEIGHT, 16]} />
           <primitive object={material} attach="material" />
         </mesh>
       ))}

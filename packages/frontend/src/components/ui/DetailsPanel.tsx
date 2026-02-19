@@ -13,6 +13,7 @@ export interface DetailsItem {
     downstream: number;
   };
   tiers?: string[];
+  links?: { label: string; url: string; }[];
   [key: string]: any;
 }
 
@@ -90,9 +91,49 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({ item, onClose }) => 
       )}
 
       {item.tiers && item.tiers.length > 0 && (
-         <div style={{ marginBottom: 8, fontSize: '0.9rem' }}>
-           <strong style={{ color: tokens.colors.text.muted }}>Tiers: </strong>
-           {item.tiers.join(', ')}
+         <div style={{ marginBottom: 12 }}>
+           <div style={{ fontSize: '0.9rem', marginBottom: 4, color: tokens.colors.text.muted, fontWeight: 'bold' }}>Tiers</div>
+           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+             {item.tiers.map((tier) => (
+               <span 
+                 key={tier}
+                 style={{ 
+                   fontSize: '0.8rem', 
+                   backgroundColor: tokens.colors.surface, 
+                   color: tokens.colors.text.primary,
+                   padding: '2px 8px', 
+                   borderRadius: 12,
+                   border: `1px solid ${tokens.colors.border}`,
+                 }}
+               >
+                 {tier}
+               </span>
+             ))}
+           </div>
+         </div>
+      )}
+
+      {item.links && item.links.length > 0 && (
+         <div style={{ marginBottom: 12 }}>
+           <div style={{ fontSize: '0.9rem', marginBottom: 4, color: tokens.colors.text.muted, fontWeight: 'bold' }}>Links</div>
+           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+             {item.links.map((link, idx) => (
+               <li key={idx} style={{ marginBottom: 4 }}>
+                 <a 
+                   href={link.url} 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   style={{ 
+                     color: tokens.colors.primary, 
+                     fontSize: '0.9rem',
+                     textDecoration: 'none'
+                   }}
+                 >
+                   {link.label}
+                 </a>
+               </li>
+             ))}
+           </ul>
          </div>
       )}
 

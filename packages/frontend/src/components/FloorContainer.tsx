@@ -26,18 +26,12 @@ export const FloorContainer: React.FC<FloorContainerProps> = ({ teamId, position
   const lod = useLOD(posVector);
   
   // Helper to get relative position for a service (converts absolute world coords to relative)
-  const getServicePosition = (serviceId: string, index: number): [number, number, number] => {
-    if (layout?.services[serviceId]) {
-      const absPos = layout.services[serviceId];
-      // Convert absolute world position to relative position (subtract parent Building position)
-      return [
-        absPos.x - lodPosition[0],
-        absPos.y - lodPosition[1],
-        absPos.z - lodPosition[2]
-      ];
-    }
-    // Fallback: use calculated floor height
-    return [0, calculateFloorY(index, FLOOR_HEIGHT, FLOOR_SPACING), 0];
+  const getServicePosition = (index: number): [number, number, number] => {
+    // Calculate floor Y position for vertical stacking
+    const floorY = calculateFloorY(index, FLOOR_HEIGHT, FLOOR_SPACING);
+    
+    // Floors stack directly on top of each other with no horizontal offset
+    return [0, floorY, 0];
   };
   
   // Helper to get y position for a service (for backwards compatibility)
@@ -61,7 +55,7 @@ export const FloorContainer: React.FC<FloorContainerProps> = ({ teamId, position
     const matrix = new THREE.Matrix4();
 
     services.forEach((service, index) => {
-      const [x, y, z] = getServicePosition(service.id, index);
+      const [x, y, z] = getServicePosition(index);
       
       // Update matrix using helper
       // Scale: [1.8, FLOOR_HEIGHT, 1.8] matches ServiceFloor box size
@@ -84,7 +78,7 @@ export const FloorContainer: React.FC<FloorContainerProps> = ({ teamId, position
     return (
       <group position={position}>
         {services.map((service, index) => {
-          const servicePos = getServicePosition(service.id, index);
+          const servicePos = getServicePosition(index);
           return (
             <ServiceFloor
               key={service.id}

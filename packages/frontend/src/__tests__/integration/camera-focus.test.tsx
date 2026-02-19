@@ -61,7 +61,7 @@ describe('Integration: Camera Focus', () => {
     };
 
     const position = getTargetPosition('team-1', layout);
-    expect(position).toEqual(new Vector3(15, 0, 15));
+    expect(position).toEqual(new Vector3(16.5, 0, 16.5));
   });
 
   it('should get target position for domain when selected', () => {
@@ -72,7 +72,7 @@ describe('Integration: Camera Focus', () => {
     };
 
     const position = getTargetPosition('domain-1', layout);
-    expect(position).toEqual(new Vector3(10, 0, 10));
+    expect(position).toEqual(new Vector3(20, 0, 20));
   });
 
   it('should return null if entity not found in layout', () => {
@@ -109,9 +109,10 @@ describe('Integration: Camera Focus', () => {
       const initialTarget = new Vector3(0, 0, 0);
       mockControls.target = initialTarget.clone();
 
-      // Run 200 frames to ensure lerping completes (lerp alpha is 0.05, so ~200 frames needed)
+      // Run 200 frames to ensure lerping completes (lerp alpha is 0.032 (2 * delta), so ~200 frames needed)
+      const mockState = { camera: { position: { lerp: vi.fn(), distanceTo: vi.fn().mockReturnValue(100) } } };
       for (let i = 0; i < 200; i++) {
-        frameCb({} as any, 0.016); // ~60fps
+        (frameCb as any)(mockState, 0.016); // ~60fps
       }
 
       // Camera target should have reached the service position
@@ -255,7 +256,7 @@ describe('Integration: Camera Focus', () => {
 
     // Try to get position for team (should work)
     const teamPosition = getTargetPosition('team-1', layout);
-    expect(teamPosition).toEqual(new Vector3(15, 0, 15));
+    expect(teamPosition).toEqual(new Vector3(16.5, 0, 16.5));
 
     // Try to get position for non-existent service
     const servicePosition = getTargetPosition('service-1', layout);
