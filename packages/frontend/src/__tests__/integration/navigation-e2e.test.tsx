@@ -12,6 +12,33 @@ vi.mock('../../stores/selectionStore', () => ({
   useSelectionStore: (selector: any) => mockUseSelectionStore(selector),
 }));
 
+// Mock bubblePositionStore to prevent infinite re-render from inline selector
+vi.mock('../../stores/bubblePositionStore', () => ({
+  useBubblePositionStore: (selector: any) => {
+    const state = {
+      screenPosition: null,
+      isVisible: false,
+      clearAnchor: vi.fn(),
+    };
+    return selector ? selector(state) : state;
+  },
+}));
+
+// Mock service detail hooks to avoid real async/API calls
+vi.mock('../../hooks/useServiceDetails', () => ({
+  useServiceDetails: () => ({ details: null, loading: false, error: null }),
+}));
+
+vi.mock('../../hooks/useTeamMembers', () => ({
+  useTeamMembers: () => ({ members: [], loading: false, error: null }),
+}));
+
+// Mock apiClient to prevent real HTTP requests during ProviderRegistry setup
+vi.mock('../../services/apiClient', () => ({
+  getDependencies: vi.fn().mockResolvedValue([]),
+  getTeamById: vi.fn().mockResolvedValue({ members: [] }),
+}));
+
 const mockDomains = [
   { id: 'd1', name: 'Domain 1', type: 'domain' },
   { id: 'd2', name: 'Domain 2', type: 'domain' }

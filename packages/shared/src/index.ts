@@ -45,4 +45,6 @@ export type {
   ServiceFilters,
   DependencyFilters,
   ErrorResponse,
+  TeamMemberDetail,
+  TeamDetailResponse,
 } from './types/api';

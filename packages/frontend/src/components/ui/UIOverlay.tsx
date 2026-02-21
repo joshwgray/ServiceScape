@@ -1,44 +1,32 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useCallback } from 'react';
 import { SearchBar } from './SearchBar';
-import { DetailsPanel, DetailsItem } from './DetailsPanel';
 import { FilterControls } from './FilterControls';
 import { NavigationMenu } from './NavigationMenu';
+import { SpeechBubble } from './SpeechBubble';
+import { SpeechBubbleContent, DetailsItem } from './SpeechBubbleContent';
 import { useSelectionStore } from '../../stores/selectionStore';
+import { useBubblePositionStore } from '../../stores/bubblePositionStore';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { useServiceDetails } from '../../hooks/useServiceDetails';
+import { useTeamMembers } from '../../hooks/useTeamMembers';
 import { BaseServiceDetailsProvider } from '../../providers/details/BaseServiceDetailsProvider';
 import { DependencyStatsProvider } from '../../providers/details/DependencyStatsProvider';
 import { ProviderRegistry } from '../../providers/details/ProviderRegistry';
 import { getDependencies } from '../../services/apiClient';
 
 export const UIOverlay: React.FC = () => {
-    const { domains, teams, services } = useOrganization();
-    const selectedServiceId = useSelectionStore((state) => state.selectedServiceId);
-    const selectService = useSelectionStore((state) => state.selectService);
-    const clearSelection = useSelectionStore((state) => state.clearSelection);
+  const { domains, teams, services } = useOrganization();
+  const selectedServiceId = useSelectionStore((state) => state.selectedServiceId);
+  const selectService = useSelectionStore((state) => state.selectService);
+  const clearSelection = useSelectionStore((state) => state.clearSelection);
+  
+  const screenPosition = useBubblePositionStore((state) => state.screenPosition);
+  const isVisible = useBubblePositionStore((state) => state.isVisible);
+  const clearAnchor = useBubblePositionStore((state) => state.clearAnchor);
 
     // Register providers when services are available
     useEffect(() => {
         const registry = ProviderRegistry.getInstance();
-        
-        // Create providers
-        // Note: In a real app we might want to clear old providers first or update them
-        // But ProviderRegistry as implemented is simple singleton.
-        // We'll rely on higher priority overrides if we register multiple times?
-        // Actually, we should probably only register once.
-        // But services dependency suggests re-registration.
-        // Let's assume for this phase we register once or overwrite.
-        // Checking ProviderRegistry.ts again would confirm behavior.
-        // Assuming it appends. If it appends, array grows. Prone to memory leak if services change often.
-        // BUT, since this is a Phase implementation and we likely load services once, let's keep it simple.
-        
-        // Actually, better to check if it has a way to clear or update.
-        // If not, maybe we should memoize providers outside?
-        // But services come from context.
-        
-        // Let's proceed with registering inside useEffect with [services] dependency
-        // and acknowledge potential accumulation if not cleared (but registry has no clear).
-        // Since this is a demo/prototype phase, it might be acceptable.
         
         const baseProvider = new BaseServiceDetailsProvider(services);
         registry.register(baseProvider, { priority: 1 });
@@ -63,30 +51,34 @@ export const UIOverlay: React.FC = () => {
         teams.forEach(t => {
             items.push({ ...t, type: 'team' });
         });
-        
-        services.forEach(s => {
-            items.push({ ...s, type: 'service' });
-        });
-        
-        return items;
-    }, [domains, teams, services]);
 
-    // Derive selected item details
-    const selectedItem = useMemo(() => {
-        if (!selectedServiceId) return null;
-        return searchableItems.find(i => i.id === selectedServiceId) || null;
-    }, [selectedServiceId, searchableItems]);
+    services.forEach((s) => {
+      items.push({ ...s, type: "service" });
+    });
 
-    // Handle search selection
-    const handleSelect = (item: any) => {
-        selectService(item.id);
-    };
+    return items;
+  }, [domains, teams, services]);
+
+  // Derive selected item details
+  const selectedItem = useMemo(() => {
+    if (!selectedServiceId) return null;
+    return searchableItems.find((i) => i.id === selectedServiceId) || null;
+  }, [selectedServiceId, searchableItems]);
 
     // Use enrichment hook if selected item is a service
     const isService = selectedItem?.type === 'service';
-    const { details: enrichedDetails, loading } = useServiceDetails(
+    const { details: enrichedDetails } = useServiceDetails(
         isService && selectedServiceId ? selectedServiceId : null
     );
+
+  // Extract teamId only when selected item is a service
+  const teamId: string | undefined =
+    selectedItem?.type === "service"
+      ? (selectedItem.teamId as string | undefined)
+      : undefined;
+
+  // Fetch team members for the selected service's team
+  const { members, loading: membersLoading } = useTeamMembers(teamId);
 
     // Merge basic details with enriched details
     const displayedItem = useMemo(() => {
@@ -102,17 +94,43 @@ export const UIOverlay: React.FC = () => {
         return selectedItem as DetailsItem;
     }, [selectedItem, isService, enrichedDetails]);
 
+  // Handle search selection
+  const handleSelect = (item: any) => {
+    selectService(item.id);
+  };
+
+  // Close handler: clear selection and bubble anchor
+  const handleClose = useCallback(() => {
+    clearSelection();
+    clearAnchor();
+  }, [clearSelection, clearAnchor]);
+
+  // Background click handler to dismiss bubble
+  // Note: This logic is intentionally removed to allow clicks to pass through to the 3D scene.
+  // The goal is to let the user interact with the scene (e.g. select another item) while the bubble is open.
+  // The scene or global handler should manage "clicking empty space" to dismiss.
+  // Original implementation blocked scene interaction.
+
+    // Determine if we should show the backdrop (to capture clicks)
+    // We only want to capture clicks if the bubble is open.
+    // const showBackdrop = !!selectedServiceId && !!screenPosition;
+
     return (
-        <div style={{
+        <div 
+            // onClick={showBackdrop ? handleBackgroundClick : undefined}
+            data-testid="ui-overlay-container"
+            style={{
             position: 'absolute',
             top: 0,
             left: 0,
             width: '100%',
             height: '100%',
-            pointerEvents: 'none',
+            pointerEvents: 'none', // Allow clicks to pass through to the scene
             zIndex: 10
         }}>
-            <NavigationMenu />
+            <div style={{ pointerEvents: 'auto' }}>
+                <NavigationMenu />
+            </div>
 
             <div style={{ position: 'absolute', top: 20, left: 70, pointerEvents: 'auto', zIndex: 90 }}>
                 <SearchBar items={searchableItems} onSelect={handleSelect} placeholder="Search services, teams, domains..." />
@@ -120,10 +138,20 @@ export const UIOverlay: React.FC = () => {
 
             <FilterControls />
             
-            <DetailsPanel 
-                item={displayedItem} 
-                onClose={clearSelection} 
-            />
+            {displayedItem && screenPosition && (
+                <SpeechBubble 
+                    x={screenPosition.x}
+                    y={screenPosition.y}
+                    visible={isVisible}
+                    onClose={handleClose}
+                >
+                    <SpeechBubbleContent 
+                        item={displayedItem}
+                        members={members}
+                        membersLoading={membersLoading}
+                    />
+                </SpeechBubble>
+            )}
         </div>
     );
 };

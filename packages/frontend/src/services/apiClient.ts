@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { Domain, Team, Service, Dependency } from '@servicescape/shared';
-import type { Position3D } from '@servicescape/shared';
+import type { Position3D, TeamDetailResponse } from '@servicescape/shared';
 
 const apiClient = axios.create({
   baseURL: '/api',
@@ -44,6 +44,11 @@ export const getDependencies = async (serviceId: string, type?: string): Promise
   
   const { upstream, downstream } = response.data;
   return [...upstream, ...downstream];
+};
+
+export const getTeamById = async (teamId: string): Promise<TeamDetailResponse> => {
+  const response = await apiClient.get<TeamDetailResponse>(`/teams/${teamId}`);
+  return response.data;
 };
 
 export const getLayout = async () => {
