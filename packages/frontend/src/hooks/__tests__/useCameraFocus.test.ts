@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import * as THREE from 'three';
 // @ts-ignore
-import { useCameraFocus, getTargetPosition, getIdealCameraPosition } from '../useCameraFocus';
+import { useCameraFocus, getTargetPosition, getIdealCameraPosition, getBuildingCameraPosition } from '../useCameraFocus';
 import { useSelectionStore } from '../../stores/selectionStore';
 
 // Mock dependencies
@@ -127,7 +127,7 @@ describe('useCameraFocus', () => {
         it('lerps camera to correct position for domain selection', async () => {
             const layout = { domains: { 'domain-1': { x: 0, y: 0, z: 0 } } } as any;
             (useSelectionStore as any).mockImplementation((selector: any) => {
-                 const state = { selectedServiceId: 'domain-1' }; 
+                 const state = { selectedServiceId: 'domain-1', selectedBuildingId: null, selectionLevel: 'service' }; 
                  return selector ? selector(state) : state;
             });
 
@@ -149,7 +149,7 @@ describe('useCameraFocus', () => {
         it('lerps camera to correct position for team selection', async () => {
             const layout = { teams: { 'team-1': { x: 10, y: 0, z: 10 } } } as any;
             (useSelectionStore as any).mockImplementation((selector: any) => {
-                 const state = { selectedServiceId: 'team-1' }; 
+                 const state = { selectedServiceId: 'team-1', selectedBuildingId: null, selectionLevel: 'service' }; 
                  return selector ? selector(state) : state;
             });
 
@@ -171,7 +171,7 @@ describe('useCameraFocus', () => {
         it('lerps camera to correct position for service selection', async () => {
             const layout = { services: { 's1': { x: 50, y: 0, z: 50 } } } as any;
             (useSelectionStore as any).mockImplementation((selector: any) => {
-                 const state = { selectedServiceId: 's1' }; 
+                 const state = { selectedServiceId: 's1', selectedBuildingId: null, selectionLevel: 'service' }; 
                  return selector ? selector(state) : state;
             });
 
@@ -191,7 +191,7 @@ describe('useCameraFocus', () => {
         it('clamps lerp alpha to 1', async () => {
             const layout = { services: { 's1': { x: 0, y: 0, z: 0 } } } as any;
             (useSelectionStore as any).mockImplementation((selector: any) => {
-                 const state = { selectedServiceId: 's1' }; 
+                 const state = { selectedServiceId: 's1', selectedBuildingId: null, selectionLevel: 'service' }; 
                  return selector ? selector(state) : state;
             });
             
@@ -206,6 +206,83 @@ describe('useCameraFocus', () => {
             // Step = 2 * 10 = 20, clamped to 1
             expect(mockControls.target.lerp).toHaveBeenCalledWith(expectedTargetPos, 1);
             expect(mockCamera.position.lerp).toHaveBeenCalledWith(expectedCameraPos, 1);
+        });
+    });
+
+    describe('building-level camera focus', () => {
+        let frameCallback: any;
+
+        beforeEach(async () => {
+            const fiber = await import('@react-three/fiber');
+            // @ts-ignore
+            fiber.useFrame.mockImplementation((cb: any) => { frameCallback = cb; });
+        });
+
+        it('useCameraFocus should use building offset when selectedBuildingId is set', async () => {
+            const layout = { teams: { 'team-1': { x: 10, y: 0, z: 10 } } } as any;
+            (useSelectionStore as any).mockImplementation((selector: any) => {
+                const state = {
+                    selectedServiceId: null,
+                    selectedBuildingId: 'team-1',
+                    selectionLevel: 'building',
+                };
+                return selector ? selector(state) : state;
+            });
+
+            renderHook(() => useCameraFocus(layout));
+
+            // Team target: (10+1.5, 0, 10+1.5) = (11.5, 0, 11.5)
+            const expectedTargetPos = new THREE.Vector3(11.5, 0, 11.5);
+            // Building camera offset (0, 30, 35): (11.5, 30, 46.5)
+            const expectedCameraPos = new THREE.Vector3(11.5, 30, 46.5);
+
+            if (frameCallback) frameCallback({ camera: mockCamera }, 0.1);
+
+            expect(mockControls.target.lerp).toHaveBeenCalledWith(expectedTargetPos, 0.2);
+            expect(mockCamera.position.lerp).toHaveBeenCalledWith(expectedCameraPos, 0.2);
+        });
+
+        it('building camera offset should be less zoomed than service offset', () => {
+            const layout = {
+                services: { 's1': { x: 0, y: 0, z: 0 } },
+                teams: { 't1': { x: 0, y: 0, z: 0 } },
+            } as any;
+            const target = new THREE.Vector3(0, 0, 0);
+
+            const servicePos = getIdealCameraPosition('s1', layout, target);
+            const buildingPos = getBuildingCameraPosition('t1', layout, target);
+
+            // Building (0,30,35) should be farther (less zoomed) than service (0,20,20)
+            expect(buildingPos).not.toBeNull();
+            expect(buildingPos!.z).toBeGreaterThan(servicePos!.z);
+            expect(buildingPos!.y).toBeGreaterThan(servicePos!.y);
+        });
+
+        it('service selection should override building camera position', async () => {
+            const layout = {
+                services: { 's1': { x: 50, y: 0, z: 50 } },
+                teams: { 'team-1': { x: 10, y: 0, z: 10 } },
+            } as any;
+            (useSelectionStore as any).mockImplementation((selector: any) => {
+                const state = {
+                    selectedServiceId: 's1',
+                    selectedBuildingId: 'team-1',
+                    selectionLevel: 'service',
+                };
+                return selector ? selector(state) : state;
+            });
+
+            renderHook(() => useCameraFocus(layout));
+
+            // Service target: (50, 0, 50)
+            const expectedTargetPos = new THREE.Vector3(50, 0, 50);
+            // Service camera offset (0, 20, 20): (50, 20, 70)
+            const expectedCameraPos = new THREE.Vector3(50, 20, 70);
+
+            if (frameCallback) frameCallback({ camera: mockCamera }, 0.1);
+
+            expect(mockControls.target.lerp).toHaveBeenCalledWith(expectedTargetPos, 0.2);
+            expect(mockCamera.position.lerp).toHaveBeenCalledWith(expectedCameraPos, 0.2);
         });
     });
 });
