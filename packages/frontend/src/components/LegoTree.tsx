@@ -1,7 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import * as THREE from 'three';
 import { createLegoPlasticMaterial } from '../utils/legoMaterials';
 import { LEGO_COLOR_BRIGHT_GREEN, LEGO_COLOR_REDDISH_BROWN } from '../utils/legoColors';
+import { useAnimatedOpacity } from '../hooks/useAnimatedOpacity';
+import { useSelectionStore } from '../stores/selectionStore';
 import { 
   getTreeVariant, 
   getFoliageType, 
@@ -23,8 +25,39 @@ export const LegoTree: React.FC<LegoTreeProps> = ({ position, seed }) => {
   
   const dimensions = TREE_DIMENSIONS[variant];
   
+  // Get selection state for transparency
+  const selectedBuildingId = useSelectionStore((state) => state.selectedBuildingId);
+  
+  // Calculate target opacity: fade trees when any building is selected
+  const targetOpacity = useMemo(() => {
+    return selectedBuildingId ? 0.15 : 1.0;
+  }, [selectedBuildingId]);
+  
+  const animatedOpacity = useAnimatedOpacity(targetOpacity);
+  
   const trunkMaterial = useMemo(() => createLegoPlasticMaterial({ color: TRUNK_COLOR }), []);
   const foliageMaterial = useMemo(() => createLegoPlasticMaterial({ color: FOLIAGE_COLOR }), []);
+  
+  // Update materials with animated opacity
+  useEffect(() => {
+    const newTransparent = animatedOpacity < 1.0;
+    
+    // Update trunk material
+    const trunkChanged = trunkMaterial.transparent !== newTransparent;
+    trunkMaterial.opacity = animatedOpacity;
+    trunkMaterial.transparent = newTransparent;
+    if (trunkChanged) {
+      trunkMaterial.needsUpdate = true;
+    }
+    
+    // Update foliage material
+    const foliageChanged = foliageMaterial.transparent !== newTransparent;
+    foliageMaterial.opacity = animatedOpacity;
+    foliageMaterial.transparent = newTransparent;
+    if (foliageChanged) {
+      foliageMaterial.needsUpdate = true;
+    }
+  }, [trunkMaterial, foliageMaterial, animatedOpacity]);
   
   const trunkGeometry = useMemo(
     () => new THREE.BoxGeometry(dimensions.trunkWidth, dimensions.trunkHeight, dimensions.trunkWidth),

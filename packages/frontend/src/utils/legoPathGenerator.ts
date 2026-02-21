@@ -28,7 +28,9 @@ export function generateLegoPath(
   brickSize: number = 1.0
 ): PathSegment[] {
   const segments: PathSegment[] = [];
-  const y = start.y;
+  // Paths should be elevated above the ground plate for visibility
+  // Ground plate is at y=0.2, so position path at y=0.8 (center of 0.8-height brick)
+  const y = 0.8;
 
   const dx = end.x - start.x;
   const dz = end.z - start.z;

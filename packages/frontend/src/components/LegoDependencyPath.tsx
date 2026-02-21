@@ -7,8 +7,8 @@ import { createLegoPlasticMaterial } from '../utils/legoMaterials';
 /** World-unit side length of each path brick */
 const BRICK_SIZE = 1.0;
 
-/** Height of each path brick (thin, to sit on the ground plane) */
-const BRICK_HEIGHT = 0.3;
+/** Height of each path brick - tall enough to be visible above ground plate */
+const BRICK_HEIGHT = 0.8;
 
 /** Slight gap between bricks for a tile-like look */
 const BRICK_VISUAL_SCALE = 0.85;

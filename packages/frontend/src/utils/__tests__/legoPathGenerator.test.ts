@@ -15,9 +15,9 @@ describe('legoPathGenerator', () => {
     const brickSize = 1.0;
     const segments = generateLegoPath(start, end, brickSize);
 
-    // All segments should be at the same Y (flat path)
+    // All segments should be at elevated position (Y=0.8) regardless of start/end Y
     segments.forEach((seg: PathSegment) => {
-      expect(seg.position[1]).toBe(0.5);
+      expect(seg.position[1]).toBe(0.8);
     });
 
     // Blocky path: each brick center should lie on a brickSize/2-offset grid.

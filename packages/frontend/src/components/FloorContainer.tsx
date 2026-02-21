@@ -98,8 +98,6 @@ export const FloorContainer: React.FC<FloorContainerProps> = ({ teamId, position
     
   }, [services, lod, layout]);
 
-  if (services.length === 0) return null;
-
   // Update FAR LOD material opacity when animatedOpacity changes.
   // Only set needsUpdate when `transparent` flips to avoid per-frame shader recompilation
   // during the animated lerp (opacity changes alone don't require a program relink).
@@ -112,6 +110,8 @@ export const FloorContainer: React.FC<FloorContainerProps> = ({ teamId, position
       material.needsUpdate = true;
     }
   }, [material, animatedOpacity]);
+
+  if (services.length === 0) return null;
 
   // Render individual floors for NEAR LOD
   if (lod === LODLevel.NEAR) {

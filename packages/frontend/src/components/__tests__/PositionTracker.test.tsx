@@ -99,8 +99,12 @@ describe('PositionTracker', () => {
         expect(mockSetAnchor).toHaveBeenCalledWith(
           expect.objectContaining({ x: 10, y: 10, z: 10 })
         );
+        // Speech bubble at bottom corner:
+        // Projection x=500, size.width=1000, so isLeftSide=true (500 < 500 is false, so actually false)
+        // isLeftSide = false, so bubbleX = BUBBLE_MARGIN_SIDE = 20 (bottom-left)
+        // bubbleY = size.height - BUBBLE_MARGIN_BOTTOM = 1000 - 100 = 900
         expect(mockSetScreenPosition).toHaveBeenCalledWith(
-            expect.objectContaining({ x: 500, y: 500 })
+            expect.objectContaining({ x: 20, y: 900 })
         );
         expect(mockSetVisibility).toHaveBeenCalledWith(true);
     });
@@ -282,7 +286,8 @@ describe('PositionTracker', () => {
         render(<PositionTracker />);
 
         expect(mockSetVisibility).toHaveBeenCalledWith(true);
-        expect(mockSetScreenPosition).toHaveBeenCalledWith({ x: 500, y: 500 });
+        // Speech bubble at bottom corner: x=20 (left), y=900 (bottom)
+        expect(mockSetScreenPosition).toHaveBeenCalledWith({ x: 20, y: 900 });
     });
 
     it('updates position across multiple frames', () => {

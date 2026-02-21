@@ -60,8 +60,24 @@ export const PositionTracker = () => {
       // Project to Screen
       const projection = projectToScreen(worldPos, camera, size.width, size.height);
       
+      // Position bubble: Fixed at bottom corner, offset from edges
+      const BUBBLE_MARGIN_BOTTOM = 100; // Space from bottom for bubble
+      const BUBBLE_MARGIN_SIDE = 20;    // Space from left/right edge
+      const BUBBLE_WIDTH = 300;          // Speech bubble width from SpeechBubble.tsx
+      
+      // Place bubble at bottom-left or bottom-right based on building position
+      // If building is on left half of screen, bubble goes to bottom-right corner
+      // If building is on right half of screen, bubble goes to bottom-left corner
+      const isLeftSide = projection.x < size.width / 2;
+      const bubbleX = isLeftSide 
+        ? size.width - BUBBLE_WIDTH - BUBBLE_MARGIN_SIDE  // Bottom-right
+        : BUBBLE_MARGIN_SIDE;                            // Bottom-left
+      
+      // Pin Y to bottom of screen
+      const bubbleY = size.height - BUBBLE_MARGIN_BOTTOM;
+      
       // Always update screen position every frame so bubble tracks the building
-      setScreenPosition({ x: projection.x, y: projection.y });
+      setScreenPosition({ x: bubbleX, y: bubbleY });
       
       // Check if visible (NDC z-clip AND viewport x/y bounds)
       const isVisible = 
