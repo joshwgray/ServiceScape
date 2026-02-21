@@ -1,11 +1,10 @@
-import React, { useMemo, useEffect, useCallback } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { SearchBar } from './SearchBar';
 import { FilterControls } from './FilterControls';
 import { NavigationMenu } from './NavigationMenu';
-import { SpeechBubble } from './SpeechBubble';
-import { SpeechBubbleContent, DetailsItem } from './SpeechBubbleContent';
+import { DetailsPanel } from './DetailsPanel';
+import { DetailsItem } from './SpeechBubbleContent';
 import { useSelectionStore } from '../../stores/selectionStore';
-import { useBubblePositionStore } from '../../stores/bubblePositionStore';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { useServiceDetails } from '../../hooks/useServiceDetails';
 import { useTeamMembers } from '../../hooks/useTeamMembers';
@@ -19,10 +18,6 @@ export const UIOverlay: React.FC = () => {
   const selectedServiceId = useSelectionStore((state) => state.selectedServiceId);
   const selectService = useSelectionStore((state) => state.selectService);
   const clearSelection = useSelectionStore((state) => state.clearSelection);
-  
-  const screenPosition = useBubblePositionStore((state) => state.screenPosition);
-  const isVisible = useBubblePositionStore((state) => state.isVisible);
-  const clearAnchor = useBubblePositionStore((state) => state.clearAnchor);
 
     // Register providers when services are available
     useEffect(() => {
@@ -99,18 +94,6 @@ export const UIOverlay: React.FC = () => {
     selectService(item.id);
   };
 
-  // Close handler: clear selection and bubble anchor
-  const handleClose = useCallback(() => {
-    clearSelection();
-    clearAnchor();
-  }, [clearSelection, clearAnchor]);
-
-  // Background click handler to dismiss bubble
-  // Note: This logic is intentionally removed to allow clicks to pass through to the 3D scene.
-  // The goal is to let the user interact with the scene (e.g. select another item) while the bubble is open.
-  // The scene or global handler should manage "clicking empty space" to dismiss.
-  // Original implementation blocked scene interaction.
-
     // Determine if we should show the backdrop (to capture clicks)
     // We only want to capture clicks if the bubble is open.
     // const showBackdrop = !!selectedServiceId && !!screenPosition;
@@ -138,20 +121,12 @@ export const UIOverlay: React.FC = () => {
 
             <FilterControls />
             
-            {displayedItem && screenPosition && (
-                <SpeechBubble 
-                    x={screenPosition.x}
-                    y={screenPosition.y}
-                    visible={isVisible}
-                    onClose={handleClose}
-                >
-                    <SpeechBubbleContent 
-                        item={displayedItem}
-                        members={members}
-                        membersLoading={membersLoading}
-                    />
-                </SpeechBubble>
-            )}
+            <DetailsPanel 
+                item={displayedItem}
+                members={members}
+                membersLoading={membersLoading}
+                onClose={clearSelection}
+            />
         </div>
     );
 };

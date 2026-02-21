@@ -1,6 +1,16 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+/**
+ * @vitest-environment jsdom
+ */
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import * as matchers from '@testing-library/jest-dom/matchers';
+import { cleanup, render, screen, fireEvent } from '@testing-library/react';
 import { DetailsPanel } from '../DetailsPanel.tsx';
+
+expect.extend(matchers);
+
+afterEach(() => {
+  cleanup();
+});
 
 // Mock store
 vi.mock('../../../stores/selectionStore');
@@ -114,6 +124,21 @@ describe('DetailsPanel', () => {
             const avatars = screen.getAllByRole('img');
             expect(avatars.length).toBeGreaterThan(0);
         });
+    });
+
+    it('calls onClose when close button is clicked', () => {
+        const onClose = vi.fn();
+        const item = {
+            id: '1',
+            name: 'Auth Service',
+            type: 'service',
+        } as any;
+        
+        render(<DetailsPanel item={item} onClose={onClose} />);
+        
+        const closeButton = screen.getByLabelText('Close details panel');
+        fireEvent.click(closeButton);
+        expect(onClose).toHaveBeenCalled();
     });
 });
 

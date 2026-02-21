@@ -4,14 +4,9 @@ import Scene from '../Scene';
 
 // Mock zustand stores
 const mockClearSelection = vi.fn();
-const mockClearAnchor = vi.fn();
 
 vi.mock('../../stores/selectionStore', () => ({
   useSelectionStore: (selector: any) => selector({ clearSelection: mockClearSelection }),
-}));
-
-vi.mock('../../stores/bubblePositionStore', () => ({
-  useBubblePositionStore: (selector: any) => selector({ clearAnchor: mockClearAnchor }),
 }));
 
 // Mock Scene children components to simplify test
@@ -20,7 +15,6 @@ vi.mock('../TreeLayer', () => ({ TreeLayer: () => null }));
 vi.mock('../CameraController', () => ({ default: () => null }));
 vi.mock('../CityLayout', () => ({ CityLayout: () => null }));
 vi.mock('../DependencyLayer', () => ({ default: () => null }));
-vi.mock('../PositionTracker', () => ({ PositionTracker: () => null }));
 
 // Mock Canvas to test onPointerMissed
 // We render a div that calls onPointerMissed when clicked
@@ -51,13 +45,12 @@ describe('Scene', () => {
         expect(screen.getByTestId('canvas-container')).toBeDefined();
     });
 
-    it('calls clearSelection and clearAnchor on background click (pointer missed)', () => {
+    it('calls clearSelection on background click (pointer missed)', () => {
         render(<Scene />);
         
         const canvas = screen.getByTestId('canvas-container');
         fireEvent.click(canvas);
         
         expect(mockClearSelection).toHaveBeenCalled();
-        expect(mockClearAnchor).toHaveBeenCalled();
     });
 });
