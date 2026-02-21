@@ -1,13 +1,19 @@
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { UIOverlay } from '../UIOverlay';
 import { ProviderRegistry } from '../../../providers/details/ProviderRegistry';
-import * as useServiceDetailsHook from '../../../hooks/useServiceDetails';
+import { useSelectionStore } from '../../../stores/selectionStore';
+import { useBubblePositionStore } from '../../../stores/bubblePositionStore';
+import { useOrganization } from '../../../contexts/OrganizationContext';
+import { useServiceDetails } from '../../../hooks/useServiceDetails';
+import { useTeamMembers } from '../../../hooks/useTeamMembers';
 
-// Mock dependencies
+// Mock all dependencies
 vi.mock('../../../stores/selectionStore', () => ({
   useSelectionStore: vi.fn(),
+}));
+vi.mock('../../../stores/bubblePositionStore', () => ({
+  useBubblePositionStore: vi.fn(),
 }));
 vi.mock('../../../contexts/OrganizationContext', () => ({
   useOrganization: vi.fn(),
@@ -15,21 +21,38 @@ vi.mock('../../../contexts/OrganizationContext', () => ({
 vi.mock('../../../hooks/useServiceDetails', () => ({
   useServiceDetails: vi.fn(),
 }));
+vi.mock('../../../hooks/useTeamMembers', () => ({
+  useTeamMembers: vi.fn(),
+}));
 
-import { useSelectionStore } from '../../../stores/selectionStore';
-import { useOrganization } from '../../../contexts/OrganizationContext';
-import { useServiceDetails } from '../../../hooks/useServiceDetails';
-import { BaseServiceDetailsProvider } from '../../../providers/details/BaseServiceDetailsProvider';
-import { DependencyStatsProvider } from '../../../providers/details/DependencyStatsProvider';
+// Mock SpeechBubble to easily test its presence and props
+vi.mock('../SpeechBubble', () => ({
+  SpeechBubble: ({ children, onClose, x, y }: any) => (
+    <div data-testid="speech-bubble">
+      <button onClick={onClose} data-testid="close-button">Close</button>
+      <div data-testid="bubble-position">{`x:${x},y:${y}`}</div>
+      {children}
+    </div>
+  ),
+}));
 
-describe('UIOverlay Enrichment', () => {
+describe('UIOverlay', () => {
     const mockSelectService = vi.fn();
     const mockClearSelection = vi.fn();
-    
+    const mockSetScreenPosition = vi.fn();
+    const mockClearAnchor = vi.fn();
+
+    // Sample data
+    const mockDomains = [{ id: 'domain-1', name: 'Platform', type: 'domain' }];
+    const mockTeams = [{ id: 'team-1', domainId: 'domain-1', name: 'Core Team', type: 'team' }];
+    const mockServices = [
+      { id: 'service-1', name: 'Auth Service', teamId: 'team-1', description: 'Handles auth', type: 'service' },
+    ];
+
     beforeEach(() => {
         vi.clearAllMocks();
         
-        // Setup default store mocks
+        // Setup default selection store mocks
         (useSelectionStore as any).mockImplementation((selector: any) => {
             const state = {
                 selectedServiceId: null,
@@ -39,20 +62,36 @@ describe('UIOverlay Enrichment', () => {
             return selector(state);
         });
 
-        // Setup organization context
-        (useOrganization as any).mockReturnValue({
-            domains: [],
-            teams: [],
-            services: [
-                { id: 's1', name: 'Service 1', type: 'service' }
-            ]
+        // Setup default bubble position store mocks
+        (useBubblePositionStore as any).mockImplementation((selector: any) => {
+            const state = {
+                screenPosition: null,
+                isVisible: false,
+                setScreenPosition: mockSetScreenPosition,
+                clearAnchor: mockClearAnchor,
+            };
+            return selector(state);
         });
 
-        // Default useServiceDetails to always return "loading" or empty
+        // Setup organization context
+        (useOrganization as any).mockReturnValue({
+            domains: mockDomains,
+            teams: mockTeams,
+            services: mockServices,
+        });
+
+        // Default useServiceDetails mock
         (useServiceDetails as any).mockReturnValue({
              details: null,
              loading: false,
              error: null
+        });
+
+        // Default useTeamMembers mock
+        (useTeamMembers as any).mockReturnValue({
+          members: [],
+          loading: false,
+          error: null,
         });
         
         // Mock ProviderRegistry methods
@@ -60,85 +99,151 @@ describe('UIOverlay Enrichment', () => {
             register: vi.fn(),
             unregister: vi.fn()
         };
-        vi.spyOn(ProviderRegistry, 'getInstance').mockReturnValue(mockRegistry as any);
+        // @ts-ignore
+        vi.spyOn(ProviderRegistry, 'getInstance').mockReturnValue(mockRegistry);
     });
 
-    it('registers providers on mount', () => {
+    it('renders nothing when no item is selected', () => {
         render(<UIOverlay />);
-
-        const instance = ProviderRegistry.getInstance();
-        expect(instance.register).toHaveBeenCalledTimes(2);
-        // We can inspect arguments if we exported the provider classes but we don't need to be overly specific here unless we mock them too.
-        // We just ensure it calls register for Base and Dependency providers.
+        expect(screen.queryByTestId('speech-bubble')).not.toBeInTheDocument();
     });
 
-    it('uses useServiceDetails hook when a service is selected', () => {
-        // Setup selection
+    it('unmounts SpeechBubble when screenPosition is null (no anchor)', () => {
         (useSelectionStore as any).mockImplementation((selector: any) => {
              const state = {
-                 selectedServiceId: 's1',
-                 selectService: mockSelectService,
-                 clearSelection: mockClearSelection
+                selectedServiceId: 'service-1',
+                selectService: mockSelectService,
+                clearSelection: mockClearSelection
              };
              return selector(state);
         });
 
-        // Setup hooks return
-        (useServiceDetails as any).mockReturnValue({
-             details: { id: 's1', name: 'Service 1 Enriched', description: 'Enriched desc' },
-             loading: false,
-             error: null
+        (useBubblePositionStore as any).mockImplementation((selector: any) => {
+             const state = {
+                screenPosition: null, // No anchor at all
+                isVisible: false,
+                setScreenPosition: mockSetScreenPosition,
+                clearAnchor: mockClearAnchor,
+             };
+             return selector(state);
         });
-
-        render(<UIOverlay />);
         
-        // Check if hook was called with correct ID
-        expect(useServiceDetails).toHaveBeenCalledWith('s1');
-
-        // Check if enriched details are displayed
-        // Wait, UIOverlay passes item to DetailsPanel. 
-        // DetailsPanel renders "Details" heading always.
-        // If passed enriched item, it should render enriched name.
-        expect(screen.getByText('Service 1 Enriched')).toBeInTheDocument();
-        expect(screen.getByText('Enriched desc')).toBeInTheDocument();
+        render(<UIOverlay />);
+        expect(screen.queryByTestId('speech-bubble')).not.toBeInTheDocument();
     });
 
-    it('does not use useServiceDetails for non-service items', () => {
-        // Setup selection for a team
+    it('keeps SpeechBubble mounted when screenPosition exists but isVisible is false', () => {
         (useSelectionStore as any).mockImplementation((selector: any) => {
              const state = {
-                 selectedServiceId: 't1', 
-                 selectService: mockSelectService,
-                 clearSelection: mockClearSelection
+                selectedServiceId: 'service-1',
+                selectService: mockSelectService,
+                clearSelection: mockClearSelection
              };
              return selector(state);
         });
 
-        // Context with a team
-        (useOrganization as any).mockReturnValue({
-            domains: [],
-            teams: [{ id: 't1', name: 'Team 1', type: 'team' }],
-            services: []
+        (useBubblePositionStore as any).mockImplementation((selector: any) => {
+             const state = {
+                screenPosition: { x: 100, y: 200 },
+                isVisible: false, // Fading out but still has a position anchor
+                setScreenPosition: mockSetScreenPosition,
+                clearAnchor: mockClearAnchor,
+             };
+             return selector(state);
+        });
+        
+        render(<UIOverlay />);
+        // SpeechBubble must remain mounted so its fade-out animation can play
+        expect(screen.getByTestId('speech-bubble')).toBeInTheDocument();
+    });
+
+    it('renders SpeechBubble when an item is selected and screen position is available', () => {
+        (useSelectionStore as any).mockImplementation((selector: any) => {
+             const state = {
+                selectedServiceId: 'service-1',
+                selectService: mockSelectService,
+                clearSelection: mockClearSelection
+             };
+             return selector(state);
+        });
+
+        (useBubblePositionStore as any).mockImplementation((selector: any) => {
+             const state = {
+                screenPosition: { x: 100, y: 200 },
+                isVisible: true,
+                setScreenPosition: mockSetScreenPosition,
+                clearAnchor: mockClearAnchor,
+             };
+             return selector(state);
+        });
+        
+        render(<UIOverlay />);
+        
+        expect(screen.getByTestId('speech-bubble')).toBeInTheDocument();
+        expect(screen.getByText('Auth Service')).toBeInTheDocument();
+        expect(screen.getByTestId('bubble-position')).toHaveTextContent('x:100,y:200');
+    });
+
+    it('calls clearSelection and clearAnchor when close button is clicked', () => {
+        (useSelectionStore as any).mockImplementation((selector: any) => {
+             const state = {
+                selectedServiceId: 'service-1',
+                selectService: mockSelectService,
+                clearSelection: mockClearSelection
+             };
+             return selector(state);
+        });
+        (useBubblePositionStore as any).mockImplementation((selector: any) => {
+             const state = {
+                screenPosition: { x: 100, y: 200 },
+                isVisible: true,
+                setScreenPosition: mockSetScreenPosition,
+                clearAnchor: mockClearAnchor,
+             };
+             return selector(state);
         });
 
         render(<UIOverlay />);
-
-        // Should be called with null or skipped
-        expect(useServiceDetails).toHaveBeenCalledWith(null);
         
-        expect(screen.getByText('Team 1')).toBeInTheDocument();
+        const closeBtn = screen.getByTestId('close-button');
+        fireEvent.click(closeBtn);
+        
+        expect(mockClearSelection).toHaveBeenCalled();
+        expect(mockClearAnchor).toHaveBeenCalled();
     });
 
-    it('unregisters providers on unmount', () => {
-        const { unmount } = render(<UIOverlay />);
-        const instance = ProviderRegistry.getInstance();
+    // Test pass-through for background dismissal
+    it('has pointer-events: none on container to allow clicks to reach the scene for dismissal', () => {
+        (useSelectionStore as any).mockImplementation((selector: any) => {
+             const state = {
+                selectedServiceId: 'service-1', // Selection active
+                selectService: mockSelectService,
+                clearSelection: mockClearSelection
+             };
+             return selector(state);
+        });
         
-        // Should have been registered
-        expect(instance.register).toHaveBeenCalledTimes(2);
+        // Mock showing bubble
+        (useBubblePositionStore as any).mockImplementation((selector: any) => {
+             const state = {
+                screenPosition: { x: 100, y: 200 },
+                isVisible: true,
+                setScreenPosition: mockSetScreenPosition,
+                clearAnchor: mockClearAnchor,
+             };
+             return selector(state);
+        });
+
+        render(<UIOverlay />);
         
-        unmount();
+        const container = screen.getByTestId('ui-overlay-container');
         
-        // Should be unregistered
-        expect(instance.unregister).toHaveBeenCalledTimes(2);
+        // CRITICAL: The overlay must allow clicks to pass through to the Canvas underneath.
+        // The Canvas handles 'onPointerMissed' to dismiss the selection.
+        expect(container).toHaveStyle({ pointerEvents: 'none' });
+
+        // Verify that UIOverlay itself does NOT intercept the click
+        fireEvent.click(container);
+        expect(mockClearSelection).not.toHaveBeenCalled();
     });
 });

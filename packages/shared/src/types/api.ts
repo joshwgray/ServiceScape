@@ -21,6 +21,17 @@ export interface PaginatedResponse<T> {
   };
 }
 
+// Team detail response (includes members)
+export interface TeamMemberDetail extends Member {
+  email?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface TeamDetailResponse extends Team {
+  members: TeamMemberDetail[];
+}
+
 // Organization API types
 export interface GetOrganizationResponse {
   domains: Domain[];

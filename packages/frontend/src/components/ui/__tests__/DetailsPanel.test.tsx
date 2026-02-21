@@ -78,5 +78,42 @@ describe('DetailsPanel', () => {
         expect(screen.getByText('Gold')).toBeInTheDocument();
         expect(screen.getByText('Critical')).toBeInTheDocument();
     });
+
+    describe('Team Members', () => {
+        const teamItem = {
+            id: 'team-1',
+            name: 'Core Team',
+            type: 'team'
+        };
+
+        it('shows loading state when members are loading', () => {
+            render(<DetailsPanel item={teamItem} membersLoading={true} />);
+            expect(screen.getByText('Loading members...')).toBeInTheDocument();
+        });
+
+        it('shows empty state when no members found', () => {
+            render(<DetailsPanel item={teamItem} members={[]} membersLoading={false} />);
+            expect(screen.getByText('No team members')).toBeInTheDocument();
+        });
+
+        it('renders list of members with avatars', () => {
+            const members = [
+                { id: '1', name: 'Alice Engineer', role: 'Engineer', teamId: 'team-1', email: 'alice@example.com', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+                { id: '2', name: 'Bob Manager', role: 'Manager', teamId: 'team-1', email: 'bob@example.com', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+            ];
+            
+            render(<DetailsPanel item={teamItem} members={members} membersLoading={false} />);
+            
+            expect(screen.getByText('Team Members')).toBeInTheDocument();
+            expect(screen.getByText('Alice Engineer')).toBeInTheDocument();
+            expect(screen.getByText('Engineer')).toBeInTheDocument();
+            expect(screen.getByText('Bob Manager')).toBeInTheDocument();
+            expect(screen.getByText('Manager')).toBeInTheDocument();
+            
+            // Verify avatars are present
+            const avatars = screen.getAllByRole('img');
+            expect(avatars.length).toBeGreaterThan(0);
+        });
+    });
 });
 

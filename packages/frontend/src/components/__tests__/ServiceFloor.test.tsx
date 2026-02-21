@@ -10,6 +10,16 @@ vi.mock('@react-three/drei', () => ({
   Box: (props: any) => <div data-testid="box" {...props} />
 }));
 
+// Mock useInteraction to avoid requiring OrganizationProvider context
+vi.mock('../../hooks/useInteraction', () => ({
+  useInteraction: () => ({
+    hoveredId: null,
+    handleClick: () => () => {},
+    handlePointerOver: () => () => {},
+    handlePointerOut: () => {},
+  }),
+}));
+
 describe('ServiceFloor', () => {
   const mockService: Service = {
     id: '1',

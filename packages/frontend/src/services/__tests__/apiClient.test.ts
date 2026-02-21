@@ -20,7 +20,7 @@ vi.mock('axios', () => {
 });
 
 // Import after mock
-import apiClient, { getDependencies } from '../apiClient';
+import apiClient, { getDependencies, getTeamById } from '../apiClient';
 
 describe('apiClient', () => {
   it('creates an axios instance with base URL /api', () => {
@@ -72,5 +72,66 @@ describe('apiClient', () => {
       type: 'OBSERVED',
       metadata: {}
     });
+  });
+});
+
+describe('getTeamById', () => {
+  it('returns team with members array', async () => {
+    const mockTeamDetail = {
+      id: 'team-1',
+      domainId: 'domain-1',
+      name: 'Platform Team',
+      managerId: 'mgr-1',
+      members: [
+        {
+          id: 'member-1',
+          name: 'Alice',
+          role: 'Engineer',
+          teamId: 'team-1',
+          email: 'alice@example.com',
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
+        },
+        {
+          id: 'member-2',
+          name: 'Bob',
+          role: 'Lead',
+          teamId: 'team-1',
+          email: 'bob@example.com',
+          createdAt: '2024-01-02T00:00:00.000Z',
+          updatedAt: '2024-01-02T00:00:00.000Z',
+        },
+      ],
+    };
+
+    const mockInstance = (axios.create as any).mock.results[0].value;
+    mockInstance.get.mockResolvedValue({ data: mockTeamDetail });
+
+    const result = await getTeamById('team-1');
+
+    expect(mockInstance.get).toHaveBeenCalledWith('/teams/team-1');
+    expect(result.id).toBe('team-1');
+    expect(result.name).toBe('Platform Team');
+    expect(result.members).toHaveLength(2);
+    expect(result.members[0]).toEqual(mockTeamDetail.members[0]);
+    expect(result.members[1]).toEqual(mockTeamDetail.members[1]);
+  });
+
+  it('handles 404 errors', async () => {
+    const mockInstance = (axios.create as any).mock.results[0].value;
+    const notFoundError = Object.assign(new Error('Request failed with status code 404'), {
+      response: { status: 404, data: { error: 'Not Found', message: 'Team not found' } },
+    });
+    mockInstance.get.mockRejectedValue(notFoundError);
+
+    await expect(getTeamById('non-existent-team')).rejects.toThrow('Request failed with status code 404');
+  });
+
+  it('handles network errors', async () => {
+    const mockInstance = (axios.create as any).mock.results[0].value;
+    const networkError = new Error('Network Error');
+    mockInstance.get.mockRejectedValue(networkError);
+
+    await expect(getTeamById('team-1')).rejects.toThrow('Network Error');
   });
 });

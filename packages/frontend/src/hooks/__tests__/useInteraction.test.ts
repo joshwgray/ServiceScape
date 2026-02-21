@@ -1,7 +1,12 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useInteraction } from '../useInteraction';
 import { useSelectionStore } from '../../stores/selectionStore';
+import { useBubblePositionStore } from '../../stores/bubblePositionStore';
+import { useOrganization } from '../../contexts/OrganizationContext';
 import type { ThreeEvent } from '@react-three/fiber';
 
 // Create a proper mock ThreeEvent type
@@ -13,20 +18,51 @@ type MockThreeEvent<T extends Event> = Partial<ThreeEvent<T>> & {
 vi.mock('../../stores/selectionStore', () => ({
   useSelectionStore: vi.fn(),
 }));
+vi.mock('../../stores/bubblePositionStore', () => ({
+  useBubblePositionStore: vi.fn(),
+}));
+vi.mock('../../contexts/OrganizationContext', () => ({
+  useOrganization: vi.fn(),
+}));
 
 describe('useInteraction', () => {
   const mockSelectService = vi.fn();
   const mockClearSelection = vi.fn();
+  const mockSetAnchor = vi.fn();
+  const mockClearAnchor = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock the store hook implementation
+    // Mock the selection store hook implementation
     (useSelectionStore as any).mockImplementation((selector: any) => {
       const state = {
         selectService: mockSelectService,
         clearSelection: mockClearSelection,
       };
       return selector ? selector(state) : state;
+    });
+
+    // Mock the bubble store hook implementation
+    (useBubblePositionStore as any).mockImplementation((selector: any) => {
+      const state = {
+        setAnchor: mockSetAnchor,
+        clearAnchor: mockClearAnchor,
+      };
+      return selector ? selector(state) : state;
+    });
+
+    // Mock Organization Context
+    (useOrganization as any).mockReturnValue({
+        layout: {
+            services: {
+                'service-123': { x: 10, y: 5, z: 20 },
+                'service-positioned': { x: 20, y: 5, z: 25 }
+            },
+            teams: {
+                'team-1': { x: 30, y: 10, z: 30 }
+            },
+            domains: {}
+        }
     });
   });
 
@@ -109,6 +145,7 @@ describe('useInteraction', () => {
 
     expect(clickEvent.stopPropagation).toHaveBeenCalled();
     expect(mockSelectService).toHaveBeenCalledWith('service-positioned');
+    expect(mockSetAnchor).toHaveBeenCalledWith(expect.any(Object)); // Check if setAnchor called
   });
 
   it('hover on positioned mesh sets correct hover state', () => {
@@ -155,5 +192,39 @@ describe('useInteraction', () => {
       result.current.handlePointerOver('service-2')(event2 as ThreeEvent<PointerEvent>);
     });
     expect(result.current.hoveredId).toBe('service-2');
+  });
+
+  it('click on team triggers selection and sets anchor', () => {
+    const { result } = renderHook(() => useInteraction());
+    
+    // Simulate clicking on a team mesh
+    const clickEvent: MockThreeEvent<MouseEvent> = {
+      stopPropagation: vi.fn(),
+      point: { x: 30, y: 10, z: 30 } as any,
+    };
+
+    act(() => {
+      result.current.handleClick('team-1')(clickEvent as ThreeEvent<MouseEvent>);
+    });
+
+    expect(clickEvent.stopPropagation).toHaveBeenCalled();
+    expect(mockSelectService).toHaveBeenCalledWith('team-1');
+    expect(mockSetAnchor).toHaveBeenCalledWith(expect.objectContaining({ x: 30, y: 10, z: 30 }));
+  });
+
+  it('handleBackgroundClick calls clearSelection and clearAnchor', () => {
+    const { result } = renderHook(() => useInteraction());
+    const event: MockThreeEvent<MouseEvent> = { 
+        stopPropagation: vi.fn(),
+        point: { x: 0, y: 0, z: 0 } as any
+    };
+
+    act(() => {
+      result.current.handleBackgroundClick(event as ThreeEvent<MouseEvent>);
+    });
+
+    expect(event.stopPropagation).toHaveBeenCalled();
+    expect(mockClearSelection).toHaveBeenCalled();
+    expect(mockClearAnchor).toHaveBeenCalled();
   });
 });
