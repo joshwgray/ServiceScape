@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Domain as DomainType, Team } from '@servicescape/shared';
 import { useLOD } from '../hooks/useLOD';
+import { useAnimatedOpacity } from '../hooks/useAnimatedOpacity';
+import { useSelectionStore } from '../stores/selectionStore';
 import { LODLevel } from '../utils/lodLevels';
 import { useVisibilityStore } from '../stores/visibilityStore';
 import { useOrganization } from '../contexts/OrganizationContext';
@@ -61,7 +63,7 @@ interface DomainProps {
 export const Domain: React.FC<DomainProps> = ({ domain, position, layout: layoutProp }) => {
     const vecPosition = useMemo(() => new THREE.Vector3(...position), [position]);
     const lod = useLOD(vecPosition);
-    const { layout: contextLayout } = useOrganization();
+    const { layout: contextLayout, teams: allTeams } = useOrganization();
     
     // Use prop layout if provided, otherwise use context layout
     const layout = layoutProp || contextLayout;
@@ -90,6 +92,37 @@ export const Domain: React.FC<DomainProps> = ({ domain, position, layout: layout
 
     const color = generateColor(domain.id);
     const farGeometry = useMemo(() => new THREE.BoxGeometry(10, 2, 10), []);
+    const farMaterial = useMemo(() => new THREE.MeshStandardMaterial({ color: new THREE.Color(color) }), [color]);
+
+    // Handle Selection & Transparency
+    const selectedBuildingId = useSelectionStore((state) => state.selectedBuildingId);
+    
+    const targetOpacity = useMemo(() => {
+        if (!selectedBuildingId) return 1.0;
+
+        // Check if selected building belongs to this domain using GLOBAL data
+        // This ensures correct behavior even if local teams aren't loaded (FAR LOD)
+        const selectedTeam = allTeams?.find(t => t.id === selectedBuildingId);
+        if (selectedTeam && selectedTeam.domainId === domain.id) {
+            return 1.0;
+        }
+        
+        // Default to fading if another building is selected 
+        return 0.15;
+    }, [selectedBuildingId, allTeams, domain.id]);
+
+    const animatedOpacity = useAnimatedOpacity(targetOpacity);
+
+    useEffect(() => {
+        if (!farMaterial) return;
+        const newTransparent = animatedOpacity < 1.0;
+        const transparentChanged = farMaterial.transparent !== newTransparent;
+        farMaterial.opacity = animatedOpacity;
+        farMaterial.transparent = newTransparent;
+        if (transparentChanged) {
+            farMaterial.needsUpdate = true;
+        }
+    }, [farMaterial, animatedOpacity]);
 
     // Calculate team positions with collision detection
     const teamPositions = useMemo(() => {
@@ -175,8 +208,7 @@ export const Domain: React.FC<DomainProps> = ({ domain, position, layout: layout
     if (lod === LODLevel.FAR) {
         // Simple Box
         return (
-            <mesh position={position} geometry={farGeometry}>
-                <meshStandardMaterial color={color} />
+            <mesh position={position} geometry={farGeometry} material={farMaterial}>
             </mesh>
         );
     }
