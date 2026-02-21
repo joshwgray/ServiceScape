@@ -1,15 +1,19 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import * as THREE from 'three';
 import { useSelectionStore } from '../stores/selectionStore';
 import { useDependencies } from '../hooks/useDependencies';
 import { useOrganization } from '../contexts/OrganizationContext';
-import DependencyEdge from './DependencyEdge';
+import LegoDependencyPath from './LegoDependencyPath';
 import { getDependencyStyle } from '../utils/edgeStyles';
 import { DEPENDENCY_TYPES } from '@servicescape/shared';
 
 const DependencyLayer: React.FC = () => {
-  const { selectedServiceId, dependencyFilters } = useSelectionStore();
+  const selectedServiceId = useSelectionStore((state) => state.selectedServiceId);
+  const dependencyFilters = useSelectionStore((state) => state.dependencyFilters);
+  const selectionLevel = useSelectionStore((state) => state.selectionLevel);
+  
   const { services, layout } = useOrganization();
+  const [visibleCount, setVisibleCount] = useState(0);
   
   // Determine filter type for API
   const filterType = useMemo(() => {
@@ -19,24 +23,51 @@ const DependencyLayer: React.FC = () => {
     return 'NONE'; // Special case to fetch nothing
   }, [dependencyFilters]);
 
+  // Only run logic if we are at service level selection
+  const isServiceSelection = selectionLevel === 'service';
+
   // Check if selected ID is actually a service
   const isService = useMemo(() => {
     if (!selectedServiceId) return false;
     return services.some(s => s.id === selectedServiceId);
   }, [selectedServiceId, services]);
 
-  // If both filters are off, we can skip fetching or pass a dummy valid type/null
-  // Current useDependencies hook fetches if serviceId is present.
-  // We can pass null serviceId if we want to skip.
-  const queryServiceId = (filterType === 'NONE' || !isService) ? null : selectedServiceId;
+  // If both filters are off or not service selection, we can skip fetching
+  const queryServiceId = (filterType === 'NONE' || !isService || !isServiceSelection) ? null : selectedServiceId;
 
   const { dependencies } = useDependencies(queryServiceId, filterType);
+  
+  // Staggered animation effect
+  useEffect(() => {
+    // Reset when selected service changes or dependencies change, or selection mode changes
+    // Using dependencies.length ensures we don't reset just because the array reference changed
+    setVisibleCount(0);
+  }, [queryServiceId, dependencies.length, filterType, isServiceSelection]);
 
-  if (!selectedServiceId || !layout || !dependencies.length) return null;
+  useEffect(() => {
+    // Gating check: only animate if we are in service selection mode
+    if (!isServiceSelection || !dependencies.length) return;
+    
+    // If we haven't shown all dependencies yet
+    if (visibleCount < dependencies.length) {
+      const timer = setTimeout(() => {
+        setVisibleCount(prev => Math.min(prev + 1, dependencies.length));
+      }, 100); // 100ms delay between each path starting
+      
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [visibleCount, dependencies.length, isServiceSelection]);
+
+
+  if (!selectedServiceId || !layout || !dependencies.length || !isServiceSelection) return null;
+
+  // Only render up to visibleCount
+  const visibleDependencies = dependencies.slice(0, visibleCount);
 
   return (
     <group>
-      {dependencies.map((dep) => {
+      {visibleDependencies.map((dep) => {
         // Find positions
         const startPos = layout.services[dep.fromServiceId];
         const endPos = layout.services[dep.toServiceId];
@@ -49,13 +80,11 @@ const DependencyLayer: React.FC = () => {
         const style = getDependencyStyle(dep.type);
 
         return (
-          <DependencyEdge
+          <LegoDependencyPath
             key={dep.id}
             start={startVector}
             end={endVector}
             color={style.color}
-            dashed={style.dashed}
-            opacity={style.opacity}
           />
         );
       })}
