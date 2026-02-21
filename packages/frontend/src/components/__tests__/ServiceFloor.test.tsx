@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ServiceFloor } from '../ServiceFloor';
 import { Service } from '@servicescape/shared';
+import type { Dependency } from '@servicescape/shared';
 
 // Mock R3F components
 vi.mock('@react-three/drei', () => ({
@@ -29,6 +30,17 @@ vi.mock('../LegoBrick', () => ({
   },
 }));
 
+// Mock useAnimatedOpacity so it returns target immediately (no frame loop in tests)
+vi.mock('../../hooks/useAnimatedOpacity', () => ({
+  useAnimatedOpacity: vi.fn((target: number) => target),
+}));
+
+// Mock useSelectionStore
+import * as selectionStoreModule from '../../stores/selectionStore';
+vi.mock('../../stores/selectionStore', () => ({
+  useSelectionStore: vi.fn(),
+}));
+
 describe('ServiceFloor', () => {
   const mockService: Service = {
     id: '1',
@@ -40,6 +52,14 @@ describe('ServiceFloor', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: no selection
+    vi.mocked(selectionStoreModule.useSelectionStore).mockImplementation((selector: any) =>
+      selector({
+        selectedServiceId: null,
+        selectedBuildingId: null,
+        selectionLevel: 'none',
+      })
+    );
   });
 
   it('renders correctly', () => {
@@ -99,6 +119,91 @@ describe('ServiceFloor', () => {
     expect(mockLegoBrick).toHaveBeenCalledWith(
       expect.objectContaining({
         transparent: true,
+      })
+    );
+  });
+
+  it('should render with reduced opacity when sibling service is selected', () => {
+    vi.mocked(selectionStoreModule.useSelectionStore).mockImplementation((selector: any) =>
+      selector({
+        selectedServiceId: 'other-service',
+        selectedBuildingId: 'building1',
+        selectionLevel: 'service',
+      })
+    );
+
+    render(
+      <ServiceFloor
+        service={mockService}
+        position={[0, 0, 0]}
+        height={0.5}
+        opacity={1.0}
+        buildingId="building1"
+        dependencies={[]}
+      />
+    );
+
+    expect(mockLegoBrick).toHaveBeenCalledWith(
+      expect.objectContaining({
+        opacity: 0.2,
+      })
+    );
+  });
+
+  it('should render with full opacity when it is the selected service', () => {
+    vi.mocked(selectionStoreModule.useSelectionStore).mockImplementation((selector: any) =>
+      selector({
+        selectedServiceId: '1',
+        selectedBuildingId: 'building1',
+        selectionLevel: 'service',
+      })
+    );
+
+    render(
+      <ServiceFloor
+        service={mockService}
+        position={[0, 0, 0]}
+        height={0.5}
+        opacity={1.0}
+        buildingId="building1"
+        dependencies={[]}
+      />
+    );
+
+    expect(mockLegoBrick).toHaveBeenCalledWith(
+      expect.objectContaining({
+        opacity: 1.0,
+      })
+    );
+  });
+
+  it('should render with full opacity when it is a dependency of selected service', () => {
+    vi.mocked(selectionStoreModule.useSelectionStore).mockImplementation((selector: any) =>
+      selector({
+        selectedServiceId: 'other-service',
+        selectedBuildingId: 'building1',
+        selectionLevel: 'service',
+      })
+    );
+
+    const deps: Dependency[] = [
+      { id: 'd1', fromServiceId: 'other-service', toServiceId: '1', type: 'DECLARED' },
+    ];
+
+    render(
+      <ServiceFloor
+        service={mockService}
+        position={[0, 0, 0]}
+        height={0.5}
+        opacity={1.0}
+        buildingId="building1"
+        dependencies={deps}
+      />
+    );
+
+    expect(mockLegoBrick).toHaveBeenCalledWith(
+      expect.objectContaining({
+        opacity: 1.0,
       })
     );
   });

@@ -5,6 +5,7 @@ import { useServiceData } from '../hooks/useServiceData';
 import { useLOD } from '../hooks/useLOD';
 import { useAnimatedOpacity } from '../hooks/useAnimatedOpacity';
 import { useSelectionStore } from '../stores/selectionStore';
+import { useDependencies } from '../hooks/useDependencies';
 import { LODLevel } from '../utils/lodLevels';
 import { calculateFloorY } from '../utils/floorLayout';
 import { updateInstanceMatrix } from '../utils/instancedGeometry';
@@ -29,6 +30,12 @@ export const FloorContainer: React.FC<FloorContainerProps> = ({ teamId, position
   
   // Get selection state and calculate opacity
   const selectedBuildingId = useSelectionStore((state) => state.selectedBuildingId);
+  const selectedServiceId = useSelectionStore((state) => state.selectedServiceId);
+  const selectionLevel = useSelectionStore((state) => state.selectionLevel);
+
+  // Fetch dependencies for the selected service when it belongs to this building
+  const isThisBuildingSelected = selectedBuildingId === teamId && selectionLevel === 'service';
+  const { dependencies } = useDependencies(isThisBuildingSelected ? selectedServiceId : null);
   
   // Determine target opacity based on selection state
   const targetOpacity = useMemo(() => {
@@ -119,6 +126,8 @@ export const FloorContainer: React.FC<FloorContainerProps> = ({ teamId, position
               position={servicePos}
               height={FLOOR_HEIGHT}
               opacity={animatedOpacity}
+              buildingId={teamId}
+              dependencies={dependencies}
             />
           );
         })}
