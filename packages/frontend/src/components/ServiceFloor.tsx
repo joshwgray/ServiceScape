@@ -19,9 +19,10 @@ export interface ServiceFloorProps {
   service: Service;
   position: [number, number, number];
   height?: number;
+  opacity?: number;
 }
 
-export const ServiceFloor: React.FC<ServiceFloorProps> = ({ service, position, height = 1 }) => {
+export const ServiceFloor: React.FC<ServiceFloorProps> = ({ service, position, height = 1, opacity = 1.0 }) => {
   const color = useMemo(() => generateColor(service.id), [service.id]);
   const selectedServiceId = useSelectionStore((state) => state.selectedServiceId);
   const { handleClick, handlePointerOver, handlePointerOut, hoveredId } = useInteraction();
@@ -49,6 +50,8 @@ export const ServiceFloor: React.FC<ServiceFloorProps> = ({ service, position, h
         studVariant={getStudVariant(service.id)}
         castShadow
         receiveShadow
+        opacity={opacity}
+        transparent={opacity < 1.0}
       />
       <Text
         position={[0, height * TEXT_Y_OFFSET_FACTOR + TEXT_Y_OFFSET_FIXED, TEXT_Z_OFFSET]}

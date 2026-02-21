@@ -5,6 +5,8 @@ import { FloorContainer } from '../FloorContainer';
 import { LODLevel } from '../../utils/lodLevels';
 import * as useLODModule from '../../hooks/useLOD';
 import * as useServiceDataModule from '../../hooks/useServiceData';
+import * as useAnimatedOpacityModule from '../../hooks/useAnimatedOpacity';
+import * as selectionStoreModule from '../../stores/selectionStore';
 import React from 'react';
 
 // Mock dependencies
@@ -20,6 +22,16 @@ vi.mock('../../hooks/useServiceData', () => ({
   useServiceData: vi.fn(),
 }));
 
+// Mock useAnimatedOpacity hook
+vi.mock('../../hooks/useAnimatedOpacity', () => ({
+  useAnimatedOpacity: vi.fn((target: number) => target),
+}));
+
+// Mock selectionStore
+vi.mock('../../stores/selectionStore', () => ({
+  useSelectionStore: vi.fn(),
+}));
+
 // Mock ServiceFloor component
 vi.mock('../ServiceFloor', () => ({
   ServiceFloor: (props: any) => (
@@ -27,6 +39,7 @@ vi.mock('../ServiceFloor', () => ({
       data-testid="service-floor" 
       data-service-id={props.service.id}
       data-position={props.position.join(',')}
+      data-opacity={props.opacity}
     />
   )
 }));
@@ -106,6 +119,10 @@ describe('FloorContainer', () => {
       loading: false,
       error: null,
     });
+    // Default: no building selected
+    (selectionStoreModule.useSelectionStore as any).mockImplementation(
+      (selector: (state: any) => any) => selector({ selectedBuildingId: null })
+    );
   });
 
   it('renders individual ServiceFloor components in NEAR LOD mode', () => {
@@ -302,4 +319,81 @@ describe('FloorContainer', () => {
     
     expect(container.firstChild).toBeNull();
   });
+
+  it('should pass animatedOpacity to ServiceFloor components in NEAR mode', () => {
+    (useLODModule.useLOD as any).mockReturnValue(LODLevel.NEAR);
+    // Mock useAnimatedOpacity to return a specific dimmed value
+    (useAnimatedOpacityModule.useAnimatedOpacity as any).mockReturnValue(0.15);
+
+    render(
+        <FloorContainer teamId="team1" position={[0, 0, 0]} lodPosition={[0, 0, 0]} />
+    );
+
+    const floors = screen.getAllByTestId('service-floor');
+    expect(floors).toHaveLength(3);
+
+    // Every ServiceFloor should receive the animated opacity value
+    floors.forEach((floor) => {
+      expect(floor).toHaveAttribute('data-opacity', '0.15');
+    });
+  });
+
+  it('should pass full opacity (1.0) to ServiceFloor components when nothing is selected', () => {
+    (useLODModule.useLOD as any).mockReturnValue(LODLevel.NEAR);
+    // When no building is selected, useAnimatedOpacity should be called with 1.0
+    // We restore the default mock (returns the target unchanged)
+    (useAnimatedOpacityModule.useAnimatedOpacity as any).mockReturnValue(1.0);
+
+    render(
+        <FloorContainer teamId="team1" position={[0, 0, 0]} lodPosition={[0, 0, 0]} />
+    );
+
+    const floors = screen.getAllByTestId('service-floor');
+    floors.forEach((floor) => {
+      expect(floor).toHaveAttribute('data-opacity', '1');
+    });
+  });
+
+  it('should call useAnimatedOpacity with targetOpacity=1.0 when no building is selected (acceptance criterion #4)', () => {
+    (useLODModule.useLOD as any).mockReturnValue(LODLevel.NEAR);
+    // selectedBuildingId = null → target must be 1.0
+    (selectionStoreModule.useSelectionStore as any).mockImplementation(
+      (selector: (state: any) => any) => selector({ selectedBuildingId: null })
+    );
+
+    render(
+        <FloorContainer teamId="team1" position={[0, 0, 0]} lodPosition={[0, 0, 0]} />
+    );
+
+    expect(useAnimatedOpacityModule.useAnimatedOpacity).toHaveBeenCalledWith(1.0);
+  });
+
+  it('should call useAnimatedOpacity with targetOpacity=1.0 when this building is selected (acceptance criterion #4)', () => {
+    (useLODModule.useLOD as any).mockReturnValue(LODLevel.NEAR);
+    // selectedBuildingId === teamId → this building is selected → target must be 1.0
+    (selectionStoreModule.useSelectionStore as any).mockImplementation(
+      (selector: (state: any) => any) => selector({ selectedBuildingId: 'team1' })
+    );
+
+    render(
+        <FloorContainer teamId="team1" position={[0, 0, 0]} lodPosition={[0, 0, 0]} />
+    );
+
+    expect(useAnimatedOpacityModule.useAnimatedOpacity).toHaveBeenCalledWith(1.0);
+  });
+
+  it('should call useAnimatedOpacity with targetOpacity=0.15 when another building is selected (acceptance criterion #4)', () => {
+    (useLODModule.useLOD as any).mockReturnValue(LODLevel.NEAR);
+    // selectedBuildingId !== teamId → another building is selected → target must be 0.15
+    (selectionStoreModule.useSelectionStore as any).mockImplementation(
+      (selector: (state: any) => any) => selector({ selectedBuildingId: 'other-team' })
+    );
+
+    render(
+        <FloorContainer teamId="team1" position={[0, 0, 0]} lodPosition={[0, 0, 0]} />
+    );
+
+    expect(useAnimatedOpacityModule.useAnimatedOpacity).toHaveBeenCalledWith(0.15);
+  });
 });
+

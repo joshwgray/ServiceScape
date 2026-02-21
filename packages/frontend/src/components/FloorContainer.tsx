@@ -1,8 +1,10 @@
 
-import React, { useMemo, useLayoutEffect, useRef } from 'react';
+import React, { useMemo, useLayoutEffect, useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { useServiceData } from '../hooks/useServiceData';
 import { useLOD } from '../hooks/useLOD';
+import { useAnimatedOpacity } from '../hooks/useAnimatedOpacity';
+import { useSelectionStore } from '../stores/selectionStore';
 import { LODLevel } from '../utils/lodLevels';
 import { calculateFloorY } from '../utils/floorLayout';
 import { updateInstanceMatrix } from '../utils/instancedGeometry';
@@ -24,6 +26,24 @@ export const FloorContainer: React.FC<FloorContainerProps> = ({ teamId, position
   const { services } = useServiceData(teamId);
   const posVector = useMemo(() => new THREE.Vector3(...lodPosition), [lodPosition]);
   const lod = useLOD(posVector);
+  
+  // Get selection state and calculate opacity
+  const selectedBuildingId = useSelectionStore((state) => state.selectedBuildingId);
+  
+  // Determine target opacity based on selection state
+  const targetOpacity = useMemo(() => {
+    // No selection: full opacity
+    if (!selectedBuildingId) return 1.0;
+    
+    // This building is selected: full opacity
+    if (selectedBuildingId === teamId) return 1.0;
+    
+    // Another building is selected: reduced opacity
+    return 0.15;
+  }, [selectedBuildingId, teamId]);
+  
+  // Smoothly animate opacity
+  const animatedOpacity = useAnimatedOpacity(targetOpacity);
   
   // Helper to get relative position for a service (converts absolute world coords to relative)
   const getServicePosition = (index: number): [number, number, number] => {
@@ -73,6 +93,19 @@ export const FloorContainer: React.FC<FloorContainerProps> = ({ teamId, position
 
   if (services.length === 0) return null;
 
+  // Update FAR LOD material opacity when animatedOpacity changes.
+  // Only set needsUpdate when `transparent` flips to avoid per-frame shader recompilation
+  // during the animated lerp (opacity changes alone don't require a program relink).
+  useEffect(() => {
+    const newTransparent = animatedOpacity < 1.0;
+    const transparentChanged = material.transparent !== newTransparent;
+    material.opacity = animatedOpacity;
+    material.transparent = newTransparent;
+    if (transparentChanged) {
+      material.needsUpdate = true;
+    }
+  }, [material, animatedOpacity]);
+
   // Render individual floors for NEAR LOD
   if (lod === LODLevel.NEAR) {
     return (
@@ -85,6 +118,7 @@ export const FloorContainer: React.FC<FloorContainerProps> = ({ teamId, position
               service={service}
               position={servicePos}
               height={FLOOR_HEIGHT}
+              opacity={animatedOpacity}
             />
           );
         })}
