@@ -11,26 +11,57 @@ export const useInteraction = () => {
   const clearSelection = useSelectionStore((state) => state.clearSelection);
   const setAnchor = useBubblePositionStore((state) => state.setAnchor);
   const clearAnchor = useBubblePositionStore((state) => state.clearAnchor);
-  const { layout } = useOrganization();
-
-  const handleClick = useCallback(
-    (id: string) => (e: ThreeEvent<MouseEvent>) => {
+  const { layout, services } = useOrganization();
+  const selectedBuildingId = useSelectionStore((state) => state.selectedBuildingId);
+  const selectBuilding = useSelectionStore((state) => state.selectBuilding);
+  
+  const handleBuildingClick = useCallback(
+    (buildingId: string) => (e: ThreeEvent<MouseEvent>) => {
       e.stopPropagation();
-      selectService(id);
+      selectBuilding(buildingId);
       
-      // Set initial anchor position immediately
-      const entity = 
-        layout?.services[id] || 
-        layout?.teams[id] || 
-        layout?.domains?.[id];
-
+      const entity = layout?.teams[buildingId];
       if (entity) {
           setAnchor(new Vector3(entity.x, entity.y, entity.z));
       }
     },
-    [selectService, layout, setAnchor]
+    [selectBuilding, layout, setAnchor]
   );
   
+  const handleServiceClick = useCallback(
+    (serviceId: string) => (e: ThreeEvent<MouseEvent>) => {
+      e.stopPropagation();
+      
+      // Auto-selection logic:
+      // Find service team
+      const service = services.find(s => s.id === serviceId);
+      const buildingId = service?.teamId;
+
+      if (buildingId && buildingId !== selectedBuildingId) {
+        // If building is not focused, select building first
+        selectBuilding(buildingId);
+        
+        // Update anchor to building position
+        const teamEntity = layout?.teams[buildingId];
+        if (teamEntity) {
+            setAnchor(new Vector3(teamEntity.x, teamEntity.y, teamEntity.z));
+        }
+      } else {
+        // Otherwise select the service (if building focused or no building found/fallback)
+        selectService(serviceId);
+        
+        // Set anchor to service position
+        const entity = layout?.services[serviceId];
+        if (entity) {
+            setAnchor(new Vector3(entity.x, entity.y, entity.z));
+        }
+      }
+    },
+    [services, selectedBuildingId, selectBuilding, selectService, layout, setAnchor]
+  );
+  
+  const handleClick = handleServiceClick;
+
   useEffect(() => {
     return () => {
       document.body.style.cursor = 'auto'; // Reset cursor on unmount
@@ -77,5 +108,7 @@ export const useInteraction = () => {
     handlePointerOver,
     handlePointerOut,
     handleBackgroundClick,
+    handleBuildingClick,
+    handleServiceClick,
   };
 };

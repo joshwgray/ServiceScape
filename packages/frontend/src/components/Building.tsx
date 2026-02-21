@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { Team } from '@servicescape/shared';
 import { Text } from '@react-three/drei';
 import { FloorContainer } from './FloorContainer';
+import { useServiceData } from '../hooks/useServiceData';
+import { useInteraction } from '../hooks/useInteraction';
 import type { LayoutPositions } from '../services/apiClient';
 
 interface BuildingProps {
@@ -10,6 +12,9 @@ interface BuildingProps {
     domainPosition?: [number, number, number];
     layout?: LayoutPositions;
 }
+
+const FLOOR_HEIGHT = 0.5;
+const FLOOR_SPACING = 0.1;
 
 export const Building: React.FC<BuildingProps> = ({ team, position, domainPosition = [0, 0, 0], layout }) => {
     // Calculate world position for LOD.
@@ -23,8 +28,28 @@ export const Building: React.FC<BuildingProps> = ({ team, position, domainPositi
         domainPosition[2] + position[2]
     ], [domainPosition, position]);
     
+    // Get services to determine building height for hitbox
+    const { services } = useServiceData(team.id);
+    const { handleBuildingClick } = useInteraction();
+    
+    const totalHeight = useMemo(() => {
+        if (!services.length) return 1; // Minimum height
+        return services.length * (FLOOR_HEIGHT + FLOOR_SPACING);
+    }, [services.length]);
+
     return (
         <group position={position}>
+            {/* Invisible Ground-Level Hitbox for Building Selection */}
+            {/* Thin plate at base to allow service clicks to pass through above */}
+            <mesh 
+                position={[0, 0.05, 0]} 
+                onClick={handleBuildingClick(team.id)}
+                renderOrder={-1}
+            >
+                <boxGeometry args={[2.2, 0.1, 2.2]} />
+                <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+            </mesh>
+            
             <FloorContainer 
                 teamId={team.id} 
                 position={[0, 0, 0]} 
@@ -32,7 +57,7 @@ export const Building: React.FC<BuildingProps> = ({ team, position, domainPositi
                 layout={layout}
             />
             <Text
-                position={[0, 3.5, 0]}
+                position={[0, totalHeight + 0.5, 0]} // Adjusted label position to be above building
                 fontSize={0.5}
                 color="black"
                 anchorX="center"
