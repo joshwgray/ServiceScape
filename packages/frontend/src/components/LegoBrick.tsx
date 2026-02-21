@@ -55,9 +55,7 @@ export const LegoBrick: React.FC<LegoBrickProps> = ({
   return (
     <group>
       {/* Brick body */}
-      <mesh castShadow={castShadow} receiveShadow={receiveShadow} geometry={brickGeometry}>
-        <primitive object={material} attach="material" />
-      </mesh>
+      <mesh castShadow={castShadow} receiveShadow={receiveShadow} geometry={brickGeometry} material={material} />
 
       {/* Studs on top */}
       {studPositions.map(([x, , z], index) => (
@@ -67,9 +65,8 @@ export const LegoBrick: React.FC<LegoBrickProps> = ({
           geometry={studGeometry}
           castShadow={castShadow}
           receiveShadow={receiveShadow}
-        >
-          <primitive object={material} attach="material" />
-        </mesh>
+          material={material}
+        />
       ))}
     </group>
   );
