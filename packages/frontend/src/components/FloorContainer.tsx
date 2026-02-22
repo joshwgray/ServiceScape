@@ -113,8 +113,8 @@ export const FloorContainer: React.FC<FloorContainerProps> = ({ teamId, position
 
   if (services.length === 0) return null;
 
-  // Render individual floors for NEAR LOD
-  if (lod === LODLevel.NEAR) {
+  // Render individual floors for MEDIUM and NEAR LOD (with service labels)
+  if (lod === LODLevel.MEDIUM || lod === LODLevel.NEAR) {
     return (
       <group position={position}>
         {services.map((service, index) => {
@@ -135,7 +135,7 @@ export const FloorContainer: React.FC<FloorContainerProps> = ({ teamId, position
     );
   }
 
-  // Render instanced mesh for FAR LOD
+  // Render instanced mesh for FAR LOD (no labels)
   return (
     <group position={position}>
       <instancedMesh

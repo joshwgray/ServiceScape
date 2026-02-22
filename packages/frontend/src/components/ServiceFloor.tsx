@@ -12,10 +12,10 @@ import { useOrganization } from '../contexts/OrganizationContext';
 import { tokens } from '../styles/tokens';
 import { LegoBrick } from './LegoBrick';
 import { getStudVariant } from '../utils/legoGeometry';
+import { labelStyles } from '../utils/labelStyles';
 import { isServiceInDependencyChain } from '../utils/dependencyHelpers';
 import { SERVICE_WIDTH, SERVICE_DEPTH } from '../utils/servicePositionCalculator';
 
-const TEXT_Z_OFFSET = 0.9;
 const TEXT_Y_OFFSET_FACTOR = 0.5;
 const TEXT_Y_OFFSET_FIXED = 0.1;
 
@@ -118,11 +118,13 @@ export const ServiceFloor: React.FC<ServiceFloorProps> = ({
         transparent={animatedOpacity < 1.0}
       />
       <Text
-        position={[0, height * TEXT_Y_OFFSET_FACTOR + TEXT_Y_OFFSET_FIXED, TEXT_Z_OFFSET]}
-        fontSize={0.2}
+        position={[0, height * TEXT_Y_OFFSET_FACTOR + TEXT_Y_OFFSET_FIXED, labelStyles.service.zOffset]}
+        fontSize={labelStyles.service.fontSize}
         color="black"
         anchorX="center"
         anchorY="bottom"
+        outlineWidth={labelStyles.service.outlineWidth}
+        outlineColor={labelStyles.service.outlineColor}
       >
         {service.name}
       </Text>

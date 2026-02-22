@@ -5,6 +5,7 @@ import { FloorContainer } from './FloorContainer';
 import { useServiceData } from '../hooks/useServiceData';
 import { useInteraction } from '../hooks/useInteraction';
 import type { LayoutPositions } from '../services/apiClient';
+import { labelStyles } from '../utils/labelStyles';
 
 interface BuildingProps {
     team: Team;
@@ -58,10 +59,12 @@ export const Building: React.FC<BuildingProps> = ({ team, position, domainPositi
             />
             <Text
                 position={[0, totalHeight + 0.5, 0]} // Adjusted label position to be above building
-                fontSize={0.5}
+                fontSize={labelStyles.building.fontSize}
                 color="black"
                 anchorX="center"
                 anchorY="bottom"
+                outlineWidth={labelStyles.building.outlineWidth}
+                outlineColor={labelStyles.building.outlineColor}
             >
                 {team.name}
             </Text>

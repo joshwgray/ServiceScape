@@ -15,6 +15,7 @@ import { LegoBaseplate } from './LegoBaseplate';
 import * as THREE from 'three';
 import { Text } from '@react-three/drei';
 import { calculateTreePositions } from '../utils/treePlacement';
+import { labelStyles } from '../utils/labelStyles';
 
 /**
  * Simple hash function to generate a seed from a string
@@ -228,10 +229,12 @@ export const Domain: React.FC<DomainProps> = ({ domain, position, layout: layout
             {/* Label */}
             <Text 
                 position={[10, 2, 10]} 
-                fontSize={0.5} 
+                fontSize={labelStyles.domain.fontSize} 
                 color="black"
                 anchorX="center"
                 anchorY="middle"
+                outlineWidth={labelStyles.domain.outlineWidth}
+                outlineColor={labelStyles.domain.outlineColor}
             >
                 {domain.name}
             </Text>
