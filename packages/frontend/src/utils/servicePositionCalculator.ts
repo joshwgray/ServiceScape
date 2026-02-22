@@ -1,7 +1,7 @@
 import { Vector3 } from 'three';
 
-export const SERVICE_WIDTH = 1.8;
-export const SERVICE_DEPTH = 1.8;
+export const SERVICE_WIDTH = 4.0;
+export const SERVICE_DEPTH = 2.0;
 
 /**
  * Calculates the "door" position on the surface of a service block that faces a target position.

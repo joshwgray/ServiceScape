@@ -42,7 +42,7 @@ function createSeededRandom(seed: number) {
 }
 
 /**
- * Check if two positions are within a given radius
+ * Check if two positions are within a given radius (circular collision)
  */
 function checkCollision(
     x1: number, z1: number, 
@@ -53,6 +53,47 @@ function checkCollision(
     const dz = z2 - z1;
     const distance = Math.sqrt(dx * dx + dz * dz);
     return distance < minDistance;
+}
+
+/**
+ * Check if a rectangle (building) collides with a point (tree center) with minimum clearance
+ */
+function checkRectanglePointCollision(
+    rectX: number, rectZ: number, 
+    rectWidth: number, rectDepth: number,
+    pointX: number, pointZ: number,
+    minClearance: number
+): boolean {
+    // Expand rectangle by minClearance in all directions
+    const expandedMinX = rectX - minClearance;
+    const expandedMaxX = rectX + rectWidth + minClearance;
+    const expandedMinZ = rectZ - minClearance;
+    const expandedMaxZ = rectZ + rectDepth + minClearance;
+    
+    // Check if point is inside expanded rectangle
+    return pointX >= expandedMinX && pointX <= expandedMaxX &&
+           pointZ >= expandedMinZ && pointZ <= expandedMaxZ;
+}
+
+/**
+ * Check if two rectangles (buildings) collide with minimum clearance
+ */
+function checkRectangleCollision(
+    rect1X: number, rect1Z: number, rect1Width: number, rect1Depth: number,
+    rect2X: number, rect2Z: number, rect2Width: number, rect2Depth: number,
+    minClearance: number
+): boolean {
+    // Expand first rectangle by minClearance
+    const expanded1MinX = rect1X - minClearance;
+    const expanded1MaxX = rect1X + rect1Width + minClearance;
+    const expanded1MinZ = rect1Z - minClearance;
+    const expanded1MaxZ = rect1Z + rect1Depth + minClearance;
+    
+    // Check AABB collision
+    return !(rect2X + rect2Width < expanded1MinX || 
+             rect2X > expanded1MaxX ||
+             rect2Z + rect2Depth < expanded1MinZ ||
+             rect2Z > expanded1MaxZ);
 }
 
 interface DomainProps {
@@ -130,12 +171,9 @@ export const Domain: React.FC<DomainProps> = ({ domain, position, layout: layout
         if (teams.length === 0 || !layout?.domains) return new Map<string, [number, number, number]>();
         
         const DOMAIN_SIZE = 20;
-        const MARGIN = 2; // 2-stud margin from edges
-        const TEAM_SIZE = 3; // Approximate team building size
-        const TREE_RADIUS = 1; // Approximate tree radius
-        // For 2 visible studs between edges: building_radius (1.5) + clearance (2) + tree_radius (1) = 4.5
-        const MIN_CENTER_DISTANCE = TEAM_SIZE / 2 + 2 + TREE_RADIUS; // Minimum center-to-center distance
-        const MIN_BUILDING_DISTANCE = TEAM_SIZE + 2; // Minimum distance between building centers (3 + 2 = 5)
+        const MARGIN = 2; // 2-stud margin from domain edges
+        const BUILDING_WIDTH = 4; // Building width (4 studs)
+        const BUILDING_DEPTH = 2; // Building depth (2 studs)
         const PLATE_TOP = 0.4;
         const MAX_ATTEMPTS = 50; // Maximum placement attempts per building
         
@@ -163,13 +201,19 @@ export const Domain: React.FC<DomainProps> = ({ domain, position, layout: layout
             
             for (let attempt = 0; attempt < MAX_ATTEMPTS && !placed; attempt++) {
                 // Generate random position within safe bounds
-                const randomX = MARGIN + random() * (DOMAIN_SIZE - 2 * MARGIN - TEAM_SIZE);
-                const randomZ = MARGIN + random() * (DOMAIN_SIZE - 2 * MARGIN - TEAM_SIZE);
+                // Account for building dimensions: 4-wide (X) and 2-deep (Z)
+                const randomX = MARGIN + random() * (DOMAIN_SIZE - 2 * MARGIN - BUILDING_WIDTH);
+                const randomZ = MARGIN + random() * (DOMAIN_SIZE - 2 * MARGIN - BUILDING_DEPTH);
                 
-                // Check collision with trees
+                // Check collision with trees (trees are points with radius)
                 let collidesTrees = false;
                 for (const tree of domainTrees) {
-                    if (checkCollision(randomX + TEAM_SIZE/2, randomZ + TEAM_SIZE/2, tree.x, tree.z, MIN_CENTER_DISTANCE)) {
+                    if (checkRectanglePointCollision(
+                        randomX, randomZ, 
+                        BUILDING_WIDTH, BUILDING_DEPTH,
+                        tree.x, tree.z,
+                        2 // 2-stud minimum clearance
+                    )) {
                         collidesTrees = true;
                         break;
                     }
@@ -177,10 +221,14 @@ export const Domain: React.FC<DomainProps> = ({ domain, position, layout: layout
                 
                 if (collidesTrees) continue;
                 
-                // Check collision with other buildings
+                // Check collision with other buildings (rectangle-to-rectangle)
                 let collidesBuildings = false;
                 for (const building of placedBuildings) {
-                    if (checkCollision(randomX + TEAM_SIZE/2, randomZ + TEAM_SIZE/2, building.x, building.z, MIN_BUILDING_DISTANCE)) {
+                    if (checkRectangleCollision(
+                        randomX, randomZ, BUILDING_WIDTH, BUILDING_DEPTH,
+                        building.x, building.z, building.width, building.depth,
+                        2 // 2-stud minimum clearance  
+                    )) {
                         collidesBuildings = true;
                         break;
                     }
@@ -189,15 +237,20 @@ export const Domain: React.FC<DomainProps> = ({ domain, position, layout: layout
                 if (collidesBuildings) continue;
                 
                 // Valid position found
-                placedBuildings.push({ x: randomX + TEAM_SIZE/2, z: randomZ + TEAM_SIZE/2 });
+                placedBuildings.push({ 
+                    x: randomX, 
+                    z: randomZ,
+                    width: BUILDING_WIDTH,
+                    depth: BUILDING_DEPTH
+                });
                 positions.set(team.id, [randomX, PLATE_TOP, randomZ]);
                 placed = true;
             }
             
             // Fallback if no position found after max attempts (shouldn't happen often)
             if (!placed) {
-                const fallbackX = MARGIN + random() * (DOMAIN_SIZE - 2 * MARGIN - TEAM_SIZE);
-                const fallbackZ = MARGIN + random() * (DOMAIN_SIZE - 2 * MARGIN - TEAM_SIZE);
+                const fallbackX = MARGIN + random() * (DOMAIN_SIZE - 2 * MARGIN - BUILDING_WIDTH);
+                const fallbackZ = MARGIN + random() * (DOMAIN_SIZE - 2 * MARGIN - BUILDING_DEPTH);
                 positions.set(team.id, [fallbackX, PLATE_TOP, fallbackZ]);
             }
         });

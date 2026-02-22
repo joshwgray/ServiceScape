@@ -47,7 +47,7 @@ export const Building: React.FC<BuildingProps> = ({ team, position, domainPositi
                 onClick={handleBuildingClick(team.id)}
                 renderOrder={-1}
             >
-                <boxGeometry args={[2.2, 0.1, 2.2]} />
+                <boxGeometry args={[4.2, 0.1, 2.2]} />
                 <meshBasicMaterial transparent opacity={0} depthWrite={false} />
             </mesh>
             

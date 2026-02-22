@@ -33,9 +33,30 @@ export const FloorContainer: React.FC<FloorContainerProps> = ({ teamId, position
   const selectedServiceId = useSelectionStore((state) => state.selectedServiceId);
   const selectionLevel = useSelectionStore((state) => state.selectionLevel);
 
-  // Fetch dependencies for the selected service when it belongs to this building
-  const isThisBuildingSelected = selectedBuildingId === teamId && selectionLevel === 'service';
-  const { dependencies } = useDependencies(isThisBuildingSelected ? selectedServiceId : null);
+  // Fetch dependencies for any selected service (not just this building's services)
+  const isServiceSelected = selectionLevel === 'service' && selectedServiceId !== null;
+  const { dependencies, loading } = useDependencies(isServiceSelected ? selectedServiceId : null);
+  
+  // Check if this building contains any dependent services
+  const containsDependentService = useMemo(() => {
+    if (!dependencies || dependencies.length === 0) return false;
+    
+    // Collect ALL service IDs involved in dependencies (both upstream and downstream)
+    // - toServiceId: services that the selected service depends ON (upstream)
+    // - fromServiceId: services that depend ON the selected service (downstream, where fromServiceId != selectedServiceId)
+    const dependentServiceIds = new Set<string>();
+    dependencies.forEach(dep => {
+      dependentServiceIds.add(dep.toServiceId);
+      dependentServiceIds.add(dep.fromServiceId);
+    });
+    
+    // Remove the selected service itself from the set
+    if (selectedServiceId) {
+      dependentServiceIds.delete(selectedServiceId);
+    }
+    
+    return services.some(service => dependentServiceIds.has(service.id));
+  }, [dependencies, services, selectedServiceId]);
   
   // Determine target opacity based on selection state
   const targetOpacity = useMemo(() => {
@@ -45,9 +66,15 @@ export const FloorContainer: React.FC<FloorContainerProps> = ({ teamId, position
     // This building is selected: full opacity
     if (selectedBuildingId === teamId) return 1.0;
     
+    // While loading dependencies, keep all buildings opaque to avoid flicker
+    if (loading) return 1.0;
+    
+    // This building contains a dependent service: full opacity
+    if (containsDependentService) return 1.0;
+    
     // Another building is selected: reduced opacity
     return 0.15;
-  }, [selectedBuildingId, teamId]);
+  }, [selectedBuildingId, teamId, containsDependentService, loading]);
   
   // Smoothly animate opacity
   const animatedOpacity = useAnimatedOpacity(targetOpacity);
