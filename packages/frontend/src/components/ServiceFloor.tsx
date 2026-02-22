@@ -1,5 +1,6 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
+import * as THREE from 'three';
 import { Service } from '@servicescape/shared';
 import type { Dependency } from '@servicescape/shared';
 import { Text } from '@react-three/drei';
@@ -7,13 +8,13 @@ import { generateColor } from '../utils/colorGenerator';
 import { useSelectionStore } from '../stores/selectionStore';
 import { useInteraction } from '../hooks/useInteraction';
 import { useAnimatedOpacity } from '../hooks/useAnimatedOpacity';
+import { useOrganization } from '../contexts/OrganizationContext';
 import { tokens } from '../styles/tokens';
 import { LegoBrick } from './LegoBrick';
 import { getStudVariant } from '../utils/legoGeometry';
 import { isServiceInDependencyChain } from '../utils/dependencyHelpers';
+import { SERVICE_WIDTH, SERVICE_DEPTH } from '../utils/servicePositionCalculator';
 
-const SERVICE_WIDTH = 1.8;
-const SERVICE_DEPTH = 1.8;
 const TEXT_Z_OFFSET = 0.9;
 const TEXT_Y_OFFSET_FACTOR = 0.5;
 const TEXT_Y_OFFSET_FIXED = 0.1;
@@ -43,6 +44,17 @@ export const ServiceFloor: React.FC<ServiceFloorProps> = ({
   const selectedBuildingId = useSelectionStore((state) => state.selectedBuildingId);
   const selectionLevel = useSelectionStore((state) => state.selectionLevel);
   const { handleClick, handlePointerOver, handlePointerOut, hoveredId } = useInteraction();
+  const { registerServicePosition } = useOrganization();
+  const groupRef = useRef<THREE.Group>(null);
+
+  useEffect(() => {
+    if (groupRef.current && typeof groupRef.current.updateMatrixWorld === 'function') {
+        groupRef.current.updateMatrixWorld(true);
+        const worldPos = new THREE.Vector3();
+        groupRef.current.getWorldPosition(worldPos);
+        registerServicePosition(service.id, [worldPos.x, worldPos.y, worldPos.z]);
+    }
+  }, [position, service.id, registerServicePosition]);
 
   const isSelected = selectedServiceId === service.id;
   const isHovered = hoveredId === service.id;
@@ -87,6 +99,7 @@ export const ServiceFloor: React.FC<ServiceFloorProps> = ({
 
   return (
     <group
+      ref={groupRef}
       position={position}
       onClick={handleClick(service.id)}
       onPointerOver={handlePointerOver(service.id)}

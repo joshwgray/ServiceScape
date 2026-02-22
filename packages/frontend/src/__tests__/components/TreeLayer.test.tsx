@@ -33,7 +33,9 @@ describe('TreeLayer', () => {
             domains: [],
             teams: [],
             services: [],
-            error: null
+            error: null,
+            renderedPositions: {},
+            registerServicePosition: vi.fn()
         });
 
         const { queryByTestId } = render(<TreeLayer />);
@@ -55,7 +57,9 @@ describe('TreeLayer', () => {
             domains: [],
             teams: [],
             services: [],
-            error: null
+            error: null,
+            renderedPositions: {},
+            registerServicePosition: vi.fn()
         });
 
         vi.mocked(TreePlacement.calculateTreePositions).mockReturnValue(mockTrees);
@@ -80,7 +84,9 @@ describe('TreeLayer', () => {
             domains: [],
             teams: [],
             services: [],
-            error: null
+            error: null,
+            renderedPositions: {},
+            registerServicePosition: vi.fn()
         });
 
         const { queryByTestId } = render(<TreeLayer />);

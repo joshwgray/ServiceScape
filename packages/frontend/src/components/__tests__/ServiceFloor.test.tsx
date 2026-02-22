@@ -35,6 +35,14 @@ vi.mock('../../hooks/useAnimatedOpacity', () => ({
   useAnimatedOpacity: vi.fn((target: number) => target),
 }));
 
+// Mock useOrganization
+const mockRegisterServicePosition = vi.fn();
+vi.mock('../../contexts/OrganizationContext', () => ({
+  useOrganization: () => ({
+    registerServicePosition: mockRegisterServicePosition,
+  }),
+}));
+
 // Mock useSelectionStore
 import * as selectionStoreModule from '../../stores/selectionStore';
 vi.mock('../../stores/selectionStore', () => ({
