@@ -19,24 +19,40 @@ vi.mock('../../contexts/OrganizationContext', () => ({
   useOrganization: vi.fn(),
 }));
 
-// Mock LegoDependencyPath
+// Mock LegoDependencyPath to capture props
+const MockLegoDependencyPath = vi.fn(({ start, end }) => {
+  return (
+    <div data-testid="lego-path" data-start={JSON.stringify(start)} data-end={JSON.stringify(end)}>
+      Lego Path
+    </div>
+  );
+});
+
 vi.mock('../LegoDependencyPath', () => ({
-  default: () => <div data-testid="lego-path">Lego Path</div>,
+  default: (props: any) => MockLegoDependencyPath(props),
 }));
 
-describe('DependencyLayer Phase 7', () => {
+// Mock calculateDoorPosition to return predictable values
+vi.mock('../../utils/servicePositionCalculator', () => ({
+  calculateDoorPosition: (params: [number, number, number]) => {
+      // Just offset by 1 for simplicity in testing
+      return [params[0] + 1, params[1], params[2] + 1];
+  },
+}));
+
+
+describe('DependencyLayer', () => {
   const mockServices = [
     { id: 'service-1', name: 'Service 1' },
     { id: 'service-2', name: 'Service 2' },
     { id: 'service-3', name: 'Service 3' },
   ];
 
-  const mockLayout = {
-    services: {
-      'service-1': { x: 0, y: 0, z: 0 },
-      'service-2': { x: 10, y: 0, z: 0 },
-      'service-3': { x: 5, y: 0, z: 5 },
-    },
+  // We are removing layout dependency, so we can mock it as null/empty or check that it's ignored
+  const mockRenderedPositions = {
+    'service-1': [10, 0, 10],
+    'service-2': [20, 0, 20],
+    'service-3': [30, 5, 30],
   };
 
   const mockDependencies = [
@@ -45,9 +61,10 @@ describe('DependencyLayer Phase 7', () => {
   ];
 
   // Helper to set up store state
-  const setupStore = (state: any) => {
+  const setupStore = (state: any = {}) => {
     (useSelectionStore as unknown as Mock).mockImplementation((selector: any) => {
-      return selector ? selector(state) : state;
+      if (!selector) return state;
+      return selector(state);
     });
   };
 
@@ -58,12 +75,23 @@ describe('DependencyLayer Phase 7', () => {
     // Default mocks
     (useOrganization as unknown as Mock).mockReturnValue({
       services: mockServices,
-      layout: mockLayout,
+      layout: null, // Ensure layout is not required
+      renderedPositions: mockRenderedPositions,
     });
 
     (useDependencies as unknown as Mock).mockReturnValue({
       dependencies: mockDependencies,
       loading: false,
+    });
+
+    MockLegoDependencyPath.mockClear();
+    
+    // Default store state
+    setupStore({
+      selectedServiceId: 'service-1',
+      selectedBuildingId: 'building-1',
+      selectionLevel: 'service', // Default to service level for most tests
+      dependencyFilters: { declared: true, observed: true },
     });
   });
 
@@ -75,9 +103,9 @@ describe('DependencyLayer Phase 7', () => {
   it('should NOT fetch dependencies when selectionLevel is building, even if serviceId is set', () => {
     // This tests the gating logic
     setupStore({
-      selectedServiceId: 'service-1', // Valid service ID
+      selectedServiceId: 'service-1', 
       selectedBuildingId: 'building-1',
-      selectionLevel: 'building', // But at building level
+      selectionLevel: 'building', 
       dependencyFilters: { declared: true, observed: true },
     });
 
@@ -113,7 +141,7 @@ describe('DependencyLayer Phase 7', () => {
 
     // Advance 100ms: 1 visible
     act(() => {
-      vi.advanceTimersByTime(100);
+      vi.advanceTimersByTime(110);
     });
     expect(getAllByTestId('lego-path')).toHaveLength(1);
 
@@ -144,14 +172,11 @@ describe('DependencyLayer Phase 7', () => {
       dependencyFilters: { declared: true, observed: true },
     });
 
-    // Setup dependencies as if they were somehow present
-    // Force useDependencies to return data
     (useDependencies as unknown as Mock).mockReturnValue({
-      dependencies: mockDependencies,
+      dependencies: mockDependencies, // Should still have dependencies returned potentially if logic was flawed
       loading: false,
     });
     
-    // We spy on setTimeout to ensure it's not called
     const setTimeoutSpy = vi.spyOn(window, 'setTimeout');
 
     const { queryAllByTestId } = render(<DependencyLayer />);
@@ -159,18 +184,114 @@ describe('DependencyLayer Phase 7', () => {
     // Should be 0 initially
     expect(queryAllByTestId('lego-path')).toHaveLength(0);
 
-    // If the effect was NOT gated, it would schedule a timeout because dependencies.length > 0 (2)
-    // and visibleCount (0) < dependencies.length (2).
-    
     // Assert no timeouts scheduled
-    // We specifically check that our stagger timeout (100ms) was not scheduled
     expect(setTimeoutSpy).not.toHaveBeenCalledWith(expect.any(Function), 100);
     
     act(() => {
-      vi.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(1000);
     });
 
     // Verify render is still 0
+    expect(queryAllByTestId('lego-path')).toHaveLength(0);
+  });
+
+  it('should utilize renderedPositions ONLY and correctly pass start/end vectors to LegoDependencyPath', async () => {
+    (useOrganization as unknown as Mock).mockReturnValue({
+      services: mockServices,
+      renderedPositions: mockRenderedPositions,
+    });
+    
+    // Explicitly mock dependencies for this test to be sure about reference stability if needed
+    // But beforeEach one should work. Let's explicitly set it here too.
+    const stableDependencies = [...mockDependencies];
+    (useDependencies as unknown as Mock).mockReturnValue({
+      dependencies: stableDependencies,
+      loading: false,
+    });
+      
+    const { getAllByTestId } = render(<DependencyLayer />);
+
+    // Fast forward animation step by step
+    await act(async () => {
+       vi.advanceTimersByTime(150);
+    });
+    await act(async () => {
+       vi.advanceTimersByTime(150);
+    });
+     await act(async () => {
+       vi.advanceTimersByTime(1000);
+    });
+
+    // Fast forward animation
+    act(() => {
+      // Advance by small steps to ensure staggered animation triggers
+      for (let i = 0; i < 20; i++) {
+        vi.advanceTimersByTime(200);
+      }
+    });
+
+    const legoPaths = getAllByTestId('lego-path');
+    
+    // Debug output
+    if (legoPaths.length !== 2) {
+      console.log('Found paths data-ends:', legoPaths.map(p => p.getAttribute('data-end')));
+      // Log what was provided to useOrganization mock to be sure
+      /*
+      console.log('mockRenderedPositions keys:', Object.keys(mockRenderedPositions));
+      console.log('mockDependencies:', JSON.stringify(mockDependencies));
+      */
+    }
+
+    expect(legoPaths).toHaveLength(2);
+
+    const parsedPaths = legoPaths.map(path => ({
+        start: JSON.parse(path.getAttribute('data-start')!),
+        end: JSON.parse(path.getAttribute('data-end')!)
+    }));
+
+    const pathZeroY = parsedPaths.find(p => p.end.y === 0);
+    const pathFiveY = parsedPaths.find(p => p.end.y === 5);
+
+    expect(pathZeroY).toBeDefined();
+    expect(pathFiveY).toBeDefined();
+
+    // Check first dependency (service-1 -> service-2)
+    const p1 = pathZeroY!;
+    expect(p1.start.x).toBe(11);
+    expect(p1.start.y).toBe(0);
+    expect(p1.start.z).toBe(11);
+
+    expect(p1.end.x).toBe(21);
+    expect(p1.end.y).toBe(0);
+    expect(p1.end.z).toBe(21);
+
+    // Check second dependency (service-1 -> service-3) which has Y offset
+    const p2 = pathFiveY!;
+    expect(p2.start.x).toBe(11);
+    expect(p2.start.y).toBe(0);
+    expect(p2.start.z).toBe(11);
+
+    expect(p2.end.x).toBe(31);
+    // Explicit check for Y coordinate from renderedPositions: should be 5
+    expect(p2.end.y).toBe(5); 
+    expect(p2.end.z).toBe(31);
+  });
+
+  it('should NOT render paths if renderedPositions are missing', () => {
+      // No rendered positions
+    (useOrganization as unknown as Mock).mockReturnValue({
+      services: mockServices,
+      layout: { services: { 'service-1': { x: 0, y: 0, z: 0 } } }, 
+      renderedPositions: {},
+    });
+
+    const { queryAllByTestId } = render(<DependencyLayer />);
+    
+     // Fast forward animation
+    act(() => {
+        vi.advanceTimersByTime(1000);
+    });
+
     expect(queryAllByTestId('lego-path')).toHaveLength(0);
   });
 });

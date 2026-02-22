@@ -6,13 +6,14 @@ import { useOrganization } from '../contexts/OrganizationContext';
 import LegoDependencyPath from './LegoDependencyPath';
 import { getDependencyStyle } from '../utils/edgeStyles';
 import { DEPENDENCY_TYPES } from '@servicescape/shared';
+import { calculateDoorPosition } from '../utils/servicePositionCalculator';
 
 const DependencyLayer: React.FC = () => {
   const selectedServiceId = useSelectionStore((state) => state.selectedServiceId);
   const dependencyFilters = useSelectionStore((state) => state.dependencyFilters);
   const selectionLevel = useSelectionStore((state) => state.selectionLevel);
   
-  const { services, layout } = useOrganization();
+  const { services, renderedPositions } = useOrganization();
   const [visibleCount, setVisibleCount] = useState(0);
   
   // Determine filter type for API
@@ -60,7 +61,7 @@ const DependencyLayer: React.FC = () => {
   }, [visibleCount, dependencies.length, isServiceSelection]);
 
 
-  if (!selectedServiceId || !layout || !dependencies.length || !isServiceSelection) return null;
+  if (!selectedServiceId || !dependencies.length || !isServiceSelection) return null;
 
   // Only render up to visibleCount
   const visibleDependencies = dependencies.slice(0, visibleCount);
@@ -69,13 +70,21 @@ const DependencyLayer: React.FC = () => {
     <group>
       {visibleDependencies.map((dep) => {
         // Find positions
-        const startPos = layout.services[dep.fromServiceId];
-        const endPos = layout.services[dep.toServiceId];
+        const startRendered = renderedPositions[dep.fromServiceId];
+        const endRendered = renderedPositions[dep.toServiceId];
 
-        if (!startPos || !endPos) return null;
+        // Only use rendered positions, no fallback to layout
+        const startRaw: [number, number, number] | null = startRendered || null;
+        const endRaw: [number, number, number] | null = endRendered || null;
 
-        const startVector = new THREE.Vector3(startPos.x, startPos.y, startPos.z);
-        const endVector = new THREE.Vector3(endPos.x, endPos.y, endPos.z);
+        if (!startRaw || !endRaw) return null;
+
+        // Calculate door positions facing each other
+        const startDoor = calculateDoorPosition(startRaw, endRaw);
+        const endDoor = calculateDoorPosition(endRaw, startRaw);
+
+        const startVector = new THREE.Vector3(...startDoor);
+        const endVector = new THREE.Vector3(...endDoor);
         
         const style = getDependencyStyle(dep.type);
 
