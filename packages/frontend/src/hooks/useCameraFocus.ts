@@ -49,20 +49,42 @@ export const getIdealCameraPosition = (id: string, layout: LayoutPositions, targ
   return null;
 };
 
+/**
+ * Calculates the ideal camera position for a building-level selection.
+ * Uses a (0, 30, 35) offset — less zoomed than service but more than team/domain.
+ */
+export const getBuildingCameraPosition = (buildingId: string, layout: LayoutPositions, target: Vector3): Vector3 | null => {
+  if (layout.teams?.[buildingId]) {
+    return target.clone().add(new Vector3(0, 30, 35));
+  }
+  return null;
+};
+
 export const useCameraFocus = (layout: LayoutPositions | null) => {
   const { controls } = useThree() as any; // Cast because controls might not be on default type
   const selectedServiceId = useSelectionStore((state) => state.selectedServiceId);
+  const selectedBuildingId = useSelectionStore((state) => state.selectedBuildingId);
+  const selectionLevel = useSelectionStore((state) => state.selectionLevel);
   
   // Target position to animate towards
   const targetRef = useRef<Vector3 | null>(null);
   const cameraPosRef = useRef<Vector3 | null>(null);
   
   useEffect(() => {
-    if (selectedServiceId && layout) {
+    if (selectionLevel === 'service' && selectedServiceId && layout) {
       const target = getTargetPosition(selectedServiceId, layout);
       if (target) {
         targetRef.current = target;
         const idealPos = getIdealCameraPosition(selectedServiceId, layout, target);
+        if (idealPos) {
+          cameraPosRef.current = idealPos;
+        }
+      }
+    } else if (selectionLevel === 'building' && selectedBuildingId && layout) {
+      const target = getTargetPosition(selectedBuildingId, layout);
+      if (target) {
+        targetRef.current = target;
+        const idealPos = getBuildingCameraPosition(selectedBuildingId, layout, target);
         if (idealPos) {
           cameraPosRef.current = idealPos;
         }
@@ -72,7 +94,7 @@ export const useCameraFocus = (layout: LayoutPositions | null) => {
         // targetRef.current = null; 
         // Keeping it focused on last selection is usually better UX than snap back
     }
-  }, [selectedServiceId, layout]);
+  }, [selectedServiceId, selectedBuildingId, selectionLevel, layout]);
 
   useFrame((state, delta) => {
     // Clamp step to [0, 1] to avoid overshoot on frame drops

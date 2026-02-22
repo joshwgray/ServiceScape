@@ -42,7 +42,9 @@ describe('CityLayout', () => {
             teams: [],
             services: [],
             layout: layout as any,
-            error: null 
+            error: null,
+            renderedPositions: {},
+            registerServicePosition: vi.fn()
         });
 
         vi.mocked(useProgLoad.useProgressiveLoad).mockImplementation(() => {});
@@ -68,7 +70,9 @@ describe('CityLayout', () => {
             teams: [],
             services: [],
             layout: layout as any,
-            error: null 
+            error: null,
+            renderedPositions: {},
+            registerServicePosition: vi.fn()
         });
 
         vi.mocked(useProgLoad.useProgressiveLoad).mockImplementation(() => {});
@@ -91,7 +95,9 @@ describe('CityLayout', () => {
             teams: [],
             services: [],
             layout: null,
-            error: null 
+            error: null,
+            renderedPositions: {},
+            registerServicePosition: vi.fn()
         });
 
         vi.mocked(useProgLoad.useProgressiveLoad).mockImplementation(() => {});

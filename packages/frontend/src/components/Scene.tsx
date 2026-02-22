@@ -7,17 +7,13 @@ import { TreeLayer } from './TreeLayer';
 import CameraController from './CameraController';
 import { CityLayout } from './CityLayout';
 import DependencyLayer from './DependencyLayer';
-import { PositionTracker } from './PositionTracker';
 import { useSelectionStore } from '../stores/selectionStore';
-import { useBubblePositionStore } from '../stores/bubblePositionStore';
 
 const Scene: React.FC = () => {
   const clearSelection = useSelectionStore((state) => state.clearSelection);
-  const clearAnchor = useBubblePositionStore((state) => state.clearAnchor);
 
   const handlePointerMissed = () => {
     clearSelection();
-    clearAnchor();
   };
 
   return (
@@ -60,7 +56,6 @@ const Scene: React.FC = () => {
       <TreeLayer />
       <CityLayout />
       <DependencyLayer />
-      <PositionTracker />
       {/* No fog — LEGO toys are photographed in clean studio light */}
     </Canvas>
   );

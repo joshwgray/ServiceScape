@@ -1,8 +1,11 @@
 
-import React, { useMemo, useLayoutEffect, useRef } from 'react';
+import React, { useMemo, useLayoutEffect, useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { useServiceData } from '../hooks/useServiceData';
 import { useLOD } from '../hooks/useLOD';
+import { useAnimatedOpacity } from '../hooks/useAnimatedOpacity';
+import { useSelectionStore } from '../stores/selectionStore';
+import { useDependencies } from '../hooks/useDependencies';
 import { LODLevel } from '../utils/lodLevels';
 import { calculateFloorY } from '../utils/floorLayout';
 import { updateInstanceMatrix } from '../utils/instancedGeometry';
@@ -24,6 +27,57 @@ export const FloorContainer: React.FC<FloorContainerProps> = ({ teamId, position
   const { services } = useServiceData(teamId);
   const posVector = useMemo(() => new THREE.Vector3(...lodPosition), [lodPosition]);
   const lod = useLOD(posVector);
+  
+  // Get selection state and calculate opacity
+  const selectedBuildingId = useSelectionStore((state) => state.selectedBuildingId);
+  const selectedServiceId = useSelectionStore((state) => state.selectedServiceId);
+  const selectionLevel = useSelectionStore((state) => state.selectionLevel);
+
+  // Fetch dependencies for any selected service (not just this building's services)
+  const isServiceSelected = selectionLevel === 'service' && selectedServiceId !== null;
+  const { dependencies, loading } = useDependencies(isServiceSelected ? selectedServiceId : null);
+  
+  // Check if this building contains any dependent services
+  const containsDependentService = useMemo(() => {
+    if (!dependencies || dependencies.length === 0) return false;
+    
+    // Collect ALL service IDs involved in dependencies (both upstream and downstream)
+    // - toServiceId: services that the selected service depends ON (upstream)
+    // - fromServiceId: services that depend ON the selected service (downstream, where fromServiceId != selectedServiceId)
+    const dependentServiceIds = new Set<string>();
+    dependencies.forEach(dep => {
+      dependentServiceIds.add(dep.toServiceId);
+      dependentServiceIds.add(dep.fromServiceId);
+    });
+    
+    // Remove the selected service itself from the set
+    if (selectedServiceId) {
+      dependentServiceIds.delete(selectedServiceId);
+    }
+    
+    return services.some(service => dependentServiceIds.has(service.id));
+  }, [dependencies, services, selectedServiceId]);
+  
+  // Determine target opacity based on selection state
+  const targetOpacity = useMemo(() => {
+    // No selection: full opacity
+    if (!selectedBuildingId) return 1.0;
+    
+    // This building is selected: full opacity
+    if (selectedBuildingId === teamId) return 1.0;
+    
+    // While loading dependencies, keep all buildings opaque to avoid flicker
+    if (loading) return 1.0;
+    
+    // This building contains a dependent service: full opacity
+    if (containsDependentService) return 1.0;
+    
+    // Another building is selected: reduced opacity
+    return 0.15;
+  }, [selectedBuildingId, teamId, containsDependentService, loading]);
+  
+  // Smoothly animate opacity
+  const animatedOpacity = useAnimatedOpacity(targetOpacity);
   
   // Helper to get relative position for a service (converts absolute world coords to relative)
   const getServicePosition = (index: number): [number, number, number] => {
@@ -71,10 +125,23 @@ export const FloorContainer: React.FC<FloorContainerProps> = ({ teamId, position
     
   }, [services, lod, layout]);
 
+  // Update FAR LOD material opacity when animatedOpacity changes.
+  // Only set needsUpdate when `transparent` flips to avoid per-frame shader recompilation
+  // during the animated lerp (opacity changes alone don't require a program relink).
+  useEffect(() => {
+    const newTransparent = animatedOpacity < 1.0;
+    const transparentChanged = material.transparent !== newTransparent;
+    material.opacity = animatedOpacity;
+    material.transparent = newTransparent;
+    if (transparentChanged) {
+      material.needsUpdate = true;
+    }
+  }, [material, animatedOpacity]);
+
   if (services.length === 0) return null;
 
-  // Render individual floors for NEAR LOD
-  if (lod === LODLevel.NEAR) {
+  // Render individual floors for MEDIUM and NEAR LOD (with service labels)
+  if (lod === LODLevel.MEDIUM || lod === LODLevel.NEAR) {
     return (
       <group position={position}>
         {services.map((service, index) => {
@@ -85,6 +152,9 @@ export const FloorContainer: React.FC<FloorContainerProps> = ({ teamId, position
               service={service}
               position={servicePos}
               height={FLOOR_HEIGHT}
+              opacity={animatedOpacity}
+              buildingId={teamId}
+              dependencies={dependencies}
             />
           );
         })}
@@ -92,7 +162,7 @@ export const FloorContainer: React.FC<FloorContainerProps> = ({ teamId, position
     );
   }
 
-  // Render instanced mesh for FAR LOD
+  // Render instanced mesh for FAR LOD (no labels)
   return (
     <group position={position}>
       <instancedMesh

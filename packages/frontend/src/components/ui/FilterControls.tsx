@@ -17,7 +17,7 @@ export const FilterControls: React.FC = () => {
         <div style={{
             position: 'absolute',
             bottom: 20,
-            right: 20,
+            left: 20,
             backgroundColor: tokens.colors.backgroundOverlay,
             padding: tokens.layout.spacing.md,
             borderRadius: 8,
