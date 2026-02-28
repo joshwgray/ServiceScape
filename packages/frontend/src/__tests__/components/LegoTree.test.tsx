@@ -1,10 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render } from '@testing-library/react';
-import { Canvas } from '@react-three/fiber';
 import LegoTree from '../../components/LegoTree';
 import { createLegoPlasticMaterial } from '../../utils/legoMaterials';
 import { getTreeVariant, getFoliageType, TREE_DIMENSIONS } from '../../utils/treeGeometry';
 import { LEGO_COLOR_REDDISH_BROWN, LEGO_COLOR_BRIGHT_GREEN } from '../../utils/legoColors';
+
+vi.mock('@react-three/fiber', () => ({
+  Canvas: ({ children }: { children: React.ReactNode }) => <div data-testid="canvas">{children}</div>,
+  useFrame: vi.fn(),
+}));
 
 // Mock selection store
 vi.mock('../../stores/selectionStore', () => ({
@@ -32,7 +36,8 @@ beforeEach(() => {
     if (typeof args[0] === 'string' && (
       args[0].includes('unrecognized in this browser') || 
       args[0].includes('incorrect casing') ||
-      args[0].includes('prop on a DOM element')
+      args[0].includes('prop on a DOM element') ||
+      args[0].includes('Invalid value for prop')
     )) {
       return;
     }
@@ -49,23 +54,27 @@ describe('LegoTree', () => {
     vi.clearAllMocks();
     vi.mocked(getTreeVariant).mockReturnValue('medium');
     vi.mocked(getFoliageType).mockReturnValue('cone');
-    vi.mocked(createLegoPlasticMaterial).mockReturnValue('material-mock' as any);
+    vi.mocked(createLegoPlasticMaterial).mockImplementation(
+      (options: { color: string }) =>
+        ({
+          color: options.color,
+          opacity: 1,
+          transparent: false,
+          needsUpdate: false,
+        }) as any
+    );
   });
 
   it('renders without crashing', () => {
     const { container } = render(
-      <Canvas>
-        <LegoTree position={[0, 0, 0]} seed="test-tree" />
-      </Canvas>
+      <LegoTree position={[0, 0, 0]} seed="test-tree" />
     );
     expect(container).toBeTruthy();
   });
 
   it('uses specific LEGO colors for trunk and foliage', () => {
     render(
-      <Canvas>
-        <LegoTree position={[0, 0, 0]} seed="test-colors" />
-      </Canvas>
+      <LegoTree position={[0, 0, 0]} seed="test-colors" />
     );
     
     // Check createLegoPlasticMaterial calls
@@ -80,9 +89,7 @@ describe('LegoTree', () => {
   it('renders cone geometry when foliage type is cone', () => {
     vi.mocked(getFoliageType).mockReturnValue('cone');
     const { container } = render(
-      <Canvas>
-        <LegoTree position={[0, 0, 0]} seed="cone-test" />
-      </Canvas>
+      <LegoTree position={[0, 0, 0]} seed="cone-test" />
     );
     
     // Geometry is now passed as a prop to mesh, not as a JSX element
@@ -94,9 +101,7 @@ describe('LegoTree', () => {
   it('renders sphere geometry when foliage type is rounded', () => {
     vi.mocked(getFoliageType).mockReturnValue('rounded');
     const { container } = render(
-      <Canvas>
-        <LegoTree position={[0, 0, 0]} seed="sphere-test" />
-      </Canvas>
+      <LegoTree position={[0, 0, 0]} seed="sphere-test" />
     );
     
     // Geometry is now passed as a prop, check for mesh elements
@@ -111,9 +116,7 @@ describe('LegoTree', () => {
     
     // Render
     const { container } = render(
-      <Canvas>
-        <LegoTree position={[0, 0, 0]} seed="small-test" />
-      </Canvas>
+      <LegoTree position={[0, 0, 0]} seed="small-test" />
     );
 
     // Verify tree renders with meshes (geometry is created in useMemo and passed as props)

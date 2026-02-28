@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateDoorPosition } from '../servicePositionCalculator';
+import { calculateDoorPosition, SERVICE_WIDTH } from '../servicePositionCalculator';
 
 describe('servicePositionCalculator', () => {
   describe('calculateDoorPosition', () => {
@@ -21,11 +21,8 @@ describe('servicePositionCalculator', () => {
       expect(result[1]).toBe(center[1]); // Y should stay same (usually)
       expect(result[2]).toBe(center[2]); // Z stays same as target is pure X move
       
-      // Should calculate correct distance based on default dimensions (1.8 width)
-      // Half width is 0.9. The offset should be somewhat outside or on the edge.
-      // Let's assume the logic puts it on the edge of the service.
-      // If width is 1.8, radius is roughly 0.9.
-      expect(result[0]).toBeCloseTo(0.9, 1);
+      // Door placement should land on the service boundary facing the target.
+      expect(result[0]).toBeCloseTo(SERVICE_WIDTH / 2, 1);
     });
 
     it('calculates door position correctly for diagonal targets', () => {

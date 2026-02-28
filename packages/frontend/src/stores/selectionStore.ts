@@ -10,12 +10,14 @@ interface SelectionState {
     declared: boolean;
     observed: boolean;
   };
+  metricsMode: boolean;
   selectService: (serviceId: string | null, buildingId?: string) => void;
   selectBuilding: (buildingId: string) => void;
   clearBuildingSelection: () => void;
   clearSelection: () => void;
   toggleFilter: (filter: "declared" | "observed") => void;
   setFilters: (filters: { declared: boolean; observed: boolean }) => void;
+  toggleMetricsMode: () => void;
 }
 
 export const useSelectionStore = create<SelectionState>((set) => ({
@@ -26,6 +28,7 @@ export const useSelectionStore = create<SelectionState>((set) => ({
     declared: true,
     observed: true,
   },
+  metricsMode: true,
   selectService: (serviceId, buildingId?) =>
     set((state) => {
       const newBuildingId =
@@ -72,4 +75,8 @@ export const useSelectionStore = create<SelectionState>((set) => ({
       },
     })),
   setFilters: (filters) => set({ dependencyFilters: filters }),
+  toggleMetricsMode: () =>
+    set((state) => ({
+      metricsMode: !state.metricsMode,
+    })),
 }));

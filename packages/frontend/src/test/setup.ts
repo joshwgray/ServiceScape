@@ -1,5 +1,42 @@
-import { vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
+
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+
+const NOISY_TEST_MESSAGES = [
+  'is unrecognized in this browser',
+  'is using incorrect casing',
+  'prop on a DOM element',
+  'non-boolean attribute',
+  'If you want to write it to the DOM',
+  'React does not recognize the `renderOrder` prop',
+  'React does not recognize the `depthWrite` prop',
+  'React does not recognize the `emissiveIntensity` prop',
+  'Warning: An update to',
+  'Multiple instances of Three.js being imported.',
+];
+
+function shouldSuppressConsoleMessage(args: unknown[]): boolean {
+  const message = args
+    .filter((arg): arg is string => typeof arg === 'string')
+    .join(' ');
+
+  return NOISY_TEST_MESSAGES.some((noisyMessage) => message.includes(noisyMessage));
+}
+
+console.error = (...args: unknown[]) => {
+  if (shouldSuppressConsoleMessage(args)) {
+    return;
+  }
+  originalConsoleError(...args);
+};
+
+console.warn = (...args: unknown[]) => {
+  if (shouldSuppressConsoleMessage(args)) {
+    return;
+  }
+  originalConsoleWarn(...args);
+};
 
 // ResizeObserver mock
 global.ResizeObserver = class ResizeObserver {
@@ -8,54 +45,54 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
 };
 
+const noop = () => {};
+
 // Mock HTMLCanvasElement.prototype.getContext for R3F
-HTMLCanvasElement.prototype.getContext = vi.fn((contextId: string) => {
+HTMLCanvasElement.prototype.getContext = ((contextId: string) => {
     if (contextId === 'webgl' || contextId === 'experimental-webgl') {
         return {
-            getExtension: vi.fn(),
-            getParameter: vi.fn(),
-            enable: vi.fn(),
-            disable: vi.fn(),
-            clearColor: vi.fn(),
-            createBuffer: vi.fn(),
-            createVertexArray: vi.fn(),
-            bindBuffer: vi.fn(),
-            bindVertexArray: vi.fn(),
-            vertexAttribPointer: vi.fn(),
-            enableVertexAttribArray: vi.fn(),
-            clear: vi.fn(),
-            viewport: vi.fn(),
-            createShader: vi.fn(),
-            shaderSource: vi.fn(),
-            compileShader: vi.fn(),
-            createProgram: vi.fn(),
-            attachShader: vi.fn(),
-            linkProgram: vi.fn(),
-            useProgram: vi.fn(),
-            getShaderParameter: vi.fn(),
-            getProgramParameter: vi.fn(),
-            deleteShader: vi.fn(),
-            deleteProgram: vi.fn(),
-            getShaderInfoLog: vi.fn(),
-            getProgramInfoLog: vi.fn(),
+            getExtension: noop,
+            getParameter: noop,
+            enable: noop,
+            disable: noop,
+            clearColor: noop,
+            createBuffer: noop,
+            createVertexArray: noop,
+            bindBuffer: noop,
+            bindVertexArray: noop,
+            vertexAttribPointer: noop,
+            enableVertexAttribArray: noop,
+            clear: noop,
+            viewport: noop,
+            createShader: noop,
+            shaderSource: noop,
+            compileShader: noop,
+            createProgram: noop,
+            attachShader: noop,
+            linkProgram: noop,
+            useProgram: noop,
+            getShaderParameter: noop,
+            getProgramParameter: noop,
+            deleteShader: noop,
+            deleteProgram: noop,
+            getShaderInfoLog: noop,
+            getProgramInfoLog: noop,
         } as unknown as WebGLRenderingContext;
     }
     return null;
-}) as any;
+}) as typeof HTMLCanvasElement.prototype.getContext;
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: (query: string) => ({
     matches: false,
     media: query,
     onchange: null,
-    addListener: vi.fn(), // deprecated
-    removeListener: vi.fn(), // deprecated
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
+    addListener: noop, // deprecated
+    removeListener: noop, // deprecated
+    addEventListener: noop,
+    removeEventListener: noop,
+    dispatchEvent: noop,
+  }),
 });
-
-

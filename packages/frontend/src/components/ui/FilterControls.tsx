@@ -6,6 +6,8 @@ export const FilterControls: React.FC = () => {
     // Note: Shallow compare or multiple hooks is better for performance, but simple selector is fine for now
     const dependencyFilters = useSelectionStore((state) => state.dependencyFilters);
     const toggleFilter = useSelectionStore((state) => state.toggleFilter);
+    const metricsMode = useSelectionStore((state) => state.metricsMode);
+    const toggleMetricsMode = useSelectionStore((state) => state.toggleMetricsMode);
 
     // If dependencyFilters isn't in store yet, fallback to default or update store
     // The previous read of selectionStore showed:
@@ -29,6 +31,15 @@ export const FilterControls: React.FC = () => {
         }}>
             <h3 style={{ margin: '0 0 8px', fontSize: '14px', color: tokens.colors.text.secondary }}>Dependencies</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: '13px' }}>
+                    <input
+                        type="checkbox"
+                        checked={metricsMode}
+                        onChange={toggleMetricsMode}
+                        style={{ marginRight: 8 }}
+                    />
+                    Risk Overlay
+                </label>
                 <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: '13px' }}>
                     <input
                         type="checkbox"

@@ -118,6 +118,27 @@ export async function getDependenciesByType(
   );
   return result.rows;
 }
+
+/**
+ * Get all dependencies across all services.
+ * Optionally filter by dependency type.
+ */
+export async function getAllDependencies(
+  pool: Pool,
+  type?: DependencyType
+): Promise<DbDependency[]> {
+  if (type) {
+    const result = await pool.query<DbDependency>(
+      'SELECT * FROM dependencies WHERE type = $1',
+      [type]
+    );
+    return result.rows;
+  }
+
+  const result = await pool.query<DbDependency>('SELECT * FROM dependencies');
+  return result.rows;
+}
+
 /**
  * Create a new dependency
  */

@@ -41,17 +41,24 @@ describe('useOrganizationData', () => {
 
     it('should handle errors', async () => {
         const error = new Error('Failed to fetch');
-        // Make sure all promises settle, one rejects
-        vi.mocked(apiClient.getDomains).mockRejectedValue(error);
-        vi.mocked(apiClient.getAllTeams).mockResolvedValue([]);
-        vi.mocked(apiClient.getAllServices).mockResolvedValue([]);
-        vi.mocked(apiClient.getLayout).mockResolvedValue({} as any);
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        try {
+            // Make sure all promises settle, one rejects
+            vi.mocked(apiClient.getDomains).mockRejectedValue(error);
+            vi.mocked(apiClient.getAllTeams).mockResolvedValue([]);
+            vi.mocked(apiClient.getAllServices).mockResolvedValue([]);
+            vi.mocked(apiClient.getLayout).mockResolvedValue({} as any);
 
-        const { result } = renderHook(() => useOrganizationData());
+            const { result } = renderHook(() => useOrganizationData());
 
-        await waitFor(() => {
-            expect(result.current.error).toBe(error);
-            expect(result.current.loading).toBe(false);
-        });
+            await waitFor(() => {
+                expect(result.current.error).toBe(error);
+                expect(result.current.loading).toBe(false);
+            });
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to fetch organization data', error);
+        } finally {
+            consoleErrorSpy.mockRestore();
+        }
     });
 });

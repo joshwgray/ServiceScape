@@ -27,6 +27,22 @@ export type {
   LayoutItem,
 } from './types/layout';
 
+// Metrics types
+export type {
+  ServiceMetrics,
+  GraphMetrics,
+  BlastRadiusResult,
+  GodServiceResult,
+  CircularDependency,
+  CycleRiskScore,
+  DomainHealthComponents,
+  DomainHealthScore,
+  DomainHealthStatus,
+  ChangeImpactAnalysis,
+  ImpactedService,
+  SuggestedStakeholder,
+} from './types/metrics';
+
 // API types
 export type {
   PaginationParams,

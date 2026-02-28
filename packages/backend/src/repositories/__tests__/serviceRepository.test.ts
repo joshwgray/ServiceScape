@@ -4,6 +4,7 @@ import {
   getServicesByTeamId,
   getServiceById,
   getAllServices,
+  getServiceDomainMap,
   createService,
 } from '../serviceRepository.js';
 import type { DbService } from '../../db/schema.js';
@@ -243,6 +244,33 @@ describe('Service Repository', () => {
       expect(mockPool.query).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO services'),
         [newService.id, newService.team_id, newService.name, newService.type, newService.tier, JSON.stringify(newService.metadata)]
+      );
+    });
+  });
+
+  describe('getServiceDomainMap', () => {
+    it('should return a service-to-domain lookup map', async () => {
+      mockQuery.mockResolvedValue({
+        rows: [
+          { service_id: 'service-1', domain_id: 'domain-a' },
+          { service_id: 'service-2', domain_id: 'domain-b' },
+          { service_id: 'service-3', domain_id: null },
+        ],
+        command: '',
+        oid: 0,
+        fields: [],
+        rowCount: 3,
+      });
+
+      const result = await getServiceDomainMap(mockPool);
+
+      expect(result).toEqual({
+        'service-1': 'domain-a',
+        'service-2': 'domain-b',
+        'service-3': null,
+      });
+      expect(mockPool.query).toHaveBeenCalledWith(
+        expect.stringContaining('FROM services s')
       );
     });
   });

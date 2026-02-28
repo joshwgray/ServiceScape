@@ -64,3 +64,12 @@ export interface DbLayoutCache {
   updated_at: Date;
   expires_at: Date | null;
 }
+
+export interface DbGraphMetricsCache {
+  cache_key: string;
+  cache_data: Record<string, any>;
+  metadata: Record<string, any>;
+  created_at: Date;
+  updated_at: Date;
+  expires_at: Date | null;
+}

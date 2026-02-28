@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Domain as DomainType, Team } from '@servicescape/shared';
+import { Domain as DomainType, DomainHealthScore, Team } from '@servicescape/shared';
 import { useLOD } from '../hooks/useLOD';
 import { useAnimatedOpacity } from '../hooks/useAnimatedOpacity';
 import { useSelectionStore } from '../stores/selectionStore';
@@ -11,11 +11,13 @@ import type { LayoutPositions } from '../services/apiClient';
 import { generateColor } from '../utils/colorGenerator';
 import { getLegoPlateColor } from '../utils/legoColors';
 import { Building } from './Building.tsx';
+import { getDomainHealthColor, HealthBadge } from './HealthBadge';
 import { LegoBaseplate } from './LegoBaseplate';
 import * as THREE from 'three';
 import { Text } from '@react-three/drei';
 import { calculateTreePositions } from '../utils/treePlacement';
 import { labelStyles } from '../utils/labelStyles';
+import type { TeamRiskSummary } from '../hooks/useGraphMetrics';
 
 /**
  * Simple hash function to generate a seed from a string
@@ -39,20 +41,6 @@ function createSeededRandom(seed: number) {
         state = (state * 1103515245 + 12345) & 0x7fffffff;
         return (state / 0x7fffffff);
     };
-}
-
-/**
- * Check if two positions are within a given radius (circular collision)
- */
-function checkCollision(
-    x1: number, z1: number, 
-    x2: number, z2: number, 
-    minDistance: number
-): boolean {
-    const dx = x2 - x1;
-    const dz = z2 - z1;
-    const distance = Math.sqrt(dx * dx + dz * dz);
-    return distance < minDistance;
 }
 
 /**
@@ -100,9 +88,24 @@ interface DomainProps {
     domain: DomainType;
     position: [number, number, number];
     layout?: LayoutPositions;
+    teamRiskMap?: Record<string, TeamRiskSummary>;
+    domainHealth?: DomainHealthScore;
 }
 
-export const Domain: React.FC<DomainProps> = ({ domain, position, layout: layoutProp }) => {
+interface PlacedBuilding {
+    x: number;
+    z: number;
+    width: number;
+    depth: number;
+}
+
+export const Domain: React.FC<DomainProps> = ({
+    domain,
+    position,
+    layout: layoutProp,
+    teamRiskMap = {},
+    domainHealth,
+}) => {
     const vecPosition = useMemo(() => new THREE.Vector3(...position), [position]);
     const lod = useLOD(vecPosition);
     const { layout: contextLayout, teams: allTeams } = useOrganization();
@@ -154,6 +157,9 @@ export const Domain: React.FC<DomainProps> = ({ domain, position, layout: layout
     }, [selectedBuildingId, allTeams, domain.id]);
 
     const animatedOpacity = useAnimatedOpacity(targetOpacity);
+    const plateColor = domainHealth
+        ? getDomainHealthColor(domainHealth.status)
+        : getLegoPlateColor(domain.id);
 
     useEffect(() => {
         if (!farMaterial) return;
@@ -192,7 +198,7 @@ export const Domain: React.FC<DomainProps> = ({ domain, position, layout: layout
         });
         
         const positions = new Map<string, [number, number, number]>();
-        const placedBuildings: { x: number; z: number }[] = [];
+        const placedBuildings: PlacedBuilding[] = [];
         
         teams.forEach(team => {
             const seed = hashString(`${domain.id}-${team.id}`);
@@ -275,9 +281,11 @@ export const Domain: React.FC<DomainProps> = ({ domain, position, layout: layout
                 width={20}
                 depth={20}
                 thickness={0.4}
-                color={getLegoPlateColor(domain.id)}
+                color={plateColor}
                 position={[10, 0.2, 10]}
             />
+
+            {domainHealth && <HealthBadge health={domainHealth} />}
 
             {/* Label */}
             <Text 
@@ -303,6 +311,8 @@ export const Domain: React.FC<DomainProps> = ({ domain, position, layout: layout
                         position={teamPosition}
                         domainPosition={position}
                         layout={layout || undefined}
+                        riskLevel={teamRiskMap[team.id]?.riskLevel}
+                        glowIntensity={teamRiskMap[team.id]?.glowIntensity}
                     />
                 );
             })}

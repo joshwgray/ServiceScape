@@ -9,10 +9,21 @@ interface DetailsPanelProps {
   onClose?: () => void;
   members?: TeamMemberDetail[];
   membersLoading?: boolean;
+  onAnalyzeImpact?: () => void;
+  impactAnalysisLoading?: boolean;
 }
 
-export const DetailsPanel: React.FC<DetailsPanelProps> = ({ item, onClose, members, membersLoading }) => {
+export const DetailsPanel: React.FC<DetailsPanelProps> = ({
+  item,
+  onClose,
+  members,
+  membersLoading,
+  onAnalyzeImpact,
+  impactAnalysisLoading = false,
+}) => {
   if (!item) return null;
+
+  const canAnalyzeImpact = item.type === 'service' && onAnalyzeImpact;
 
   return (
     <div style={{
@@ -54,6 +65,27 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({ item, onClose, membe
       </div>
 
       <SpeechBubbleContent item={item} members={members} membersLoading={membersLoading} />
+
+      {canAnalyzeImpact ? (
+        <button
+          type="button"
+          onClick={onAnalyzeImpact}
+          disabled={impactAnalysisLoading}
+          style={{
+            marginTop: 16,
+            width: '100%',
+            padding: '10px 12px',
+            borderRadius: 6,
+            border: `1px solid ${tokens.colors.primary}`,
+            backgroundColor: impactAnalysisLoading ? tokens.colors.surface : tokens.colors.primary,
+            color: tokens.colors.text.inverse,
+            fontWeight: 700,
+            cursor: impactAnalysisLoading ? 'wait' : 'pointer',
+          }}
+        >
+          {impactAnalysisLoading ? 'Analyzing Impact...' : 'Analyze Impact'}
+        </button>
+      ) : null}
     </div>
   );
 };

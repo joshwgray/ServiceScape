@@ -2,22 +2,33 @@ import React, { useMemo } from 'react';
 import { Team } from '@servicescape/shared';
 import { Text } from '@react-three/drei';
 import { FloorContainer } from './FloorContainer';
+import { RiskOverlay } from './RiskOverlay';
 import { useServiceData } from '../hooks/useServiceData';
 import { useInteraction } from '../hooks/useInteraction';
 import type { LayoutPositions } from '../services/apiClient';
 import { labelStyles } from '../utils/labelStyles';
+import type { RiskLevel } from '../hooks/useGraphMetrics';
 
 interface BuildingProps {
     team: Team;
     position: [number, number, number];
     domainPosition?: [number, number, number];
     layout?: LayoutPositions;
+    riskLevel?: RiskLevel;
+    glowIntensity?: number;
 }
 
 const FLOOR_HEIGHT = 0.5;
 const FLOOR_SPACING = 0.1;
 
-export const Building: React.FC<BuildingProps> = ({ team, position, domainPosition = [0, 0, 0], layout }) => {
+export const Building: React.FC<BuildingProps> = ({
+    team,
+    position,
+    domainPosition = [0, 0, 0],
+    layout,
+    riskLevel = 'none',
+    glowIntensity = 0,
+}) => {
     // Calculate world position for LOD.
     // Y uses domain Y only (not + position[1]) so that FloorContainer computes
     // service relative-Y from domain ground level (absPos.y - domainY), not from
@@ -56,6 +67,11 @@ export const Building: React.FC<BuildingProps> = ({ team, position, domainPositi
                 position={[0, 0, 0]} 
                 lodPosition={worldPosition}
                 layout={layout}
+            />
+            <RiskOverlay
+                riskLevel={riskLevel}
+                glowIntensity={glowIntensity}
+                totalHeight={totalHeight}
             />
             <Text
                 position={[0, totalHeight + 0.5, 0]} // Adjusted label position to be above building

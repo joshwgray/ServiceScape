@@ -29,6 +29,7 @@ describe('Integration: Camera Focus', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     frameCb = null;
+    mockControls.target = new Vector3(0, 0, 0);
     
     vi.mocked(useThree).mockReturnValue({
       controls: mockControls,
@@ -95,7 +96,11 @@ describe('Integration: Camera Focus', () => {
 
     // Mock store to return selected service
     vi.mocked(useSelectionStore).mockImplementation((selector: any) => {
-      const state = { selectedServiceId: 'service-1' };
+      const state = {
+        selectedServiceId: 'service-1',
+        selectedBuildingId: null,
+        selectionLevel: 'service',
+      };
       return selector ? selector(state) : state;
     });
 
@@ -134,7 +139,11 @@ describe('Integration: Camera Focus', () => {
 
     // Mock store with no selection
     vi.mocked(useSelectionStore).mockImplementation((selector: any) => {
-      const state = { selectedServiceId: null };
+      const state = {
+        selectedServiceId: null,
+        selectedBuildingId: null,
+        selectionLevel: 'none',
+      };
       return selector ? selector(state) : state;
     });
 
@@ -174,7 +183,11 @@ describe('Integration: Camera Focus', () => {
 
     // Start with service-1 selected
     vi.mocked(useSelectionStore).mockImplementation((selector: any) => {
-      const state = { selectedServiceId: 'service-1' };
+      const state = {
+        selectedServiceId: 'service-1',
+        selectedBuildingId: null,
+        selectionLevel: 'service',
+      };
       return selector ? selector(state) : state;
     });
 
@@ -182,7 +195,11 @@ describe('Integration: Camera Focus', () => {
 
     // Change selection to service-2
     vi.mocked(useSelectionStore).mockImplementation((selector: any) => {
-      const state = { selectedServiceId: 'service-2' };
+      const state = {
+        selectedServiceId: 'service-2',
+        selectedBuildingId: null,
+        selectionLevel: 'service',
+      };
       return selector ? selector(state) : state;
     });
 
@@ -200,7 +217,11 @@ describe('Integration: Camera Focus', () => {
     };
 
     vi.mocked(useSelectionStore).mockImplementation((selector: any) => {
-      const state = { selectedServiceId: 'service-1' };
+      const state = {
+        selectedServiceId: 'service-1',
+        selectedBuildingId: null,
+        selectionLevel: 'service',
+      };
       return selector ? selector(state) : state;
     });
 
@@ -216,7 +237,11 @@ describe('Integration: Camera Focus', () => {
 
   it('should handle null layout', () => {
     vi.mocked(useSelectionStore).mockImplementation((selector: any) => {
-      const state = { selectedServiceId: 'service-1' };
+      const state = {
+        selectedServiceId: 'service-1',
+        selectedBuildingId: null,
+        selectionLevel: 'service',
+      };
       return selector ? selector(state) : state;
     });
 
@@ -234,7 +259,11 @@ describe('Integration: Camera Focus', () => {
     };
 
     vi.mocked(useSelectionStore).mockImplementation((selector: any) => {
-      const state = { selectedServiceId: 'service-1' };
+      const state = {
+        selectedServiceId: 'service-1',
+        selectedBuildingId: null,
+        selectionLevel: 'service',
+      };
       return selector ? selector(state) : state;
     });
 

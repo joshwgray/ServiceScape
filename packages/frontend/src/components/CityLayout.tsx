@@ -1,8 +1,11 @@
 import React, { useMemo } from 'react';
 import { useOrganization } from '../contexts/OrganizationContext';
+import { useDomainHealth } from '../hooks/useDomainHealth';
+import { useGraphMetrics } from '../hooks/useGraphMetrics';
 import { useProgressiveLoad, VisibleObject } from '../hooks/useProgressiveLoad';
 import { Domain } from './Domain';
 import type { Position3D } from '@servicescape/shared';
+import { useSelectionStore } from '../stores/selectionStore';
 
 // For fallback positioning
 const DEFAULT_POSITION: [number, number, number] = [0, 0, 0];
@@ -13,7 +16,10 @@ const DEFAULT_POSITION: [number, number, number] = [0, 0, 0];
 const toTuple = (pos: Position3D): [number, number, number] => [pos.x, pos.y, pos.z];
 
 export const CityLayout: React.FC = () => {
-    const { domains, loading, error, layout } = useOrganization();
+    const { domains, services, loading, error, layout } = useOrganization();
+    const metricsMode = useSelectionStore((state) => state.metricsMode);
+    const { domainHealthMap } = useDomainHealth(Boolean(metricsMode));
+    const { teamRiskMap } = useGraphMetrics(metricsMode ? services : []);
     
     // Transform domains for progressive load tracking
     const visibleObjects = useMemo<VisibleObject[]>(() => {
@@ -53,6 +59,8 @@ export const CityLayout: React.FC = () => {
                         domain={domain} 
                         position={position}
                         layout={layout || undefined}
+                        teamRiskMap={teamRiskMap}
+                        domainHealth={metricsMode ? domainHealthMap[domain.id] : undefined}
                     />
                 );
             })}

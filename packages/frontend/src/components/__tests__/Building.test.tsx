@@ -29,6 +29,14 @@ vi.mock('../FloorContainer', () => ({
     }
 }));
 
+const mockRiskOverlay = vi.fn();
+vi.mock('../RiskOverlay', () => ({
+    RiskOverlay: (props: any) => {
+        mockRiskOverlay(props);
+        return <div data-testid="risk-overlay" />;
+    }
+}));
+
 // Mock hooks
 vi.mock('../../hooks/useLOD', () => ({
     useLOD: vi.fn(),
@@ -122,6 +130,36 @@ describe('Building Component', () => {
             expect.objectContaining({
                 teamId: 't1',
                 layout: undefined
+            })
+        );
+    });
+
+    it('passes risk props to RiskOverlay when provided', () => {
+        (useLOD.useLOD as any).mockReturnValue(LODLevel.NEAR);
+        (useServiceData.useServiceData as any).mockReturnValue({
+            services: [{ id: 's1', teamId: 't1', name: 'Service 1' }],
+            loading: false,
+            error: null,
+        });
+        (useInteraction.useInteraction as any).mockReturnValue({
+            handleBuildingClick: (_id: string) => mockHandleBuildingClick,
+            handleClick: vi.fn(),
+        });
+
+        render(
+            <Building
+                team={mockTeam}
+                position={[0, 0, 0]}
+                domainPosition={[0, 0, 0]}
+                riskLevel="red"
+                glowIntensity={0.9}
+            />
+        );
+
+        expect(mockRiskOverlay).toHaveBeenCalledWith(
+            expect.objectContaining({
+                riskLevel: 'red',
+                glowIntensity: 0.9
             })
         );
     });

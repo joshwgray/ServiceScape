@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import { SearchBar } from './SearchBar';
 import { FilterControls } from './FilterControls';
 import { NavigationMenu } from './NavigationMenu';
@@ -12,12 +12,22 @@ import { BaseServiceDetailsProvider } from '../../providers/details/BaseServiceD
 import { DependencyStatsProvider } from '../../providers/details/DependencyStatsProvider';
 import { ProviderRegistry } from '../../providers/details/ProviderRegistry';
 import { getDependencies } from '../../services/apiClient';
+import { useImpactAnalysis } from '../../hooks/useImpactAnalysis';
+import { ImpactAnalysisPanel } from '../ImpactAnalysisPanel';
 
 export const UIOverlay: React.FC = () => {
   const { domains, teams, services } = useOrganization();
   const selectedServiceId = useSelectionStore((state) => state.selectedServiceId);
   const selectService = useSelectionStore((state) => state.selectService);
   const clearSelection = useSelectionStore((state) => state.clearSelection);
+  const [impactPanelOpen, setImpactPanelOpen] = useState(false);
+  const {
+    analysis: impactAnalysis,
+    loading: impactAnalysisLoading,
+    error: impactAnalysisError,
+    analyzeImpact,
+    clearAnalysis,
+  } = useImpactAnalysis();
 
     // Register providers when services are available
     useEffect(() => {
@@ -94,6 +104,24 @@ export const UIOverlay: React.FC = () => {
     selectService(item.id);
   };
 
+  const handleAnalyzeImpact = useCallback(() => {
+    if (!selectedServiceId) {
+      return;
+    }
+    setImpactPanelOpen(true);
+    void analyzeImpact(selectedServiceId);
+  }, [analyzeImpact, selectedServiceId]);
+
+  const handleCloseImpactPanel = useCallback(() => {
+    setImpactPanelOpen(false);
+    clearAnalysis();
+  }, [clearAnalysis]);
+
+  useEffect(() => {
+    setImpactPanelOpen(false);
+    clearAnalysis();
+  }, [selectedServiceId, clearAnalysis]);
+
     // Determine if we should show the backdrop (to capture clicks)
     // We only want to capture clicks if the bubble is open.
     // const showBackdrop = !!selectedServiceId && !!screenPosition;
@@ -126,6 +154,16 @@ export const UIOverlay: React.FC = () => {
                 members={members}
                 membersLoading={membersLoading}
                 onClose={clearSelection}
+                onAnalyzeImpact={isService ? handleAnalyzeImpact : undefined}
+                impactAnalysisLoading={impactAnalysisLoading}
+            />
+
+            <ImpactAnalysisPanel
+                analysis={impactPanelOpen ? impactAnalysis : null}
+                loading={impactPanelOpen ? impactAnalysisLoading : false}
+                error={impactPanelOpen ? impactAnalysisError : null}
+                serviceName={displayedItem?.name}
+                onClose={handleCloseImpactPanel}
             />
         </div>
     );

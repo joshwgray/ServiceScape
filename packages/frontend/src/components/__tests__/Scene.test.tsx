@@ -22,8 +22,8 @@ vi.mock('@react-three/fiber', async () => {
     return {
         // We need to define Canvas as a default export or just Canvas depending on how it's imported
         // The Scene component imports: `import { Canvas } from '@react-three/fiber';`
-        Canvas: ({ onPointerMissed, children, ...props }: any) => (
-            <div data-testid="canvas-container" onClick={() => onPointerMissed?.()} {...props}>
+        Canvas: ({ onPointerMissed, children }: any) => (
+            <div data-testid="canvas-container" onClick={() => onPointerMissed?.()}>
                 {children}
             </div>
         ),

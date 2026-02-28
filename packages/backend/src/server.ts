@@ -7,6 +7,11 @@ import { teamRouter } from './routes/teams.js';
 import { serviceRouter } from './routes/services.js';
 import { dependencyRouter } from './routes/dependencies.js';
 import { layoutRouter } from './routes/layout.js';
+import {
+  analyticsRouter,
+  domainAnalyticsRouter,
+  serviceAnalyticsRouter,
+} from './routes/analytics.js';
 
 export const app: Express = express();
 
@@ -43,6 +48,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 // Organization routes
 apiRouter.use('/domains', domainRouter);
+apiRouter.use('/domains', domainAnalyticsRouter);
 apiRouter.use('/domains/:domainId/teams', teamRouter);
 apiRouter.use('/teams', teamRouter);
 apiRouter.use('/teams/:teamId/services', serviceRouter);
@@ -53,6 +59,8 @@ apiRouter.use('/services/:serviceId/dependencies', dependencyRouter);
 
 // Layout routes
 apiRouter.use('/layout', layoutRouter);
+apiRouter.use('/analytics', analyticsRouter);
+apiRouter.use('/services', serviceAnalyticsRouter);
 
 // Mount API router
 app.use('/api', apiRouter);

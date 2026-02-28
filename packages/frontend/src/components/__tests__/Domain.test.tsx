@@ -33,6 +33,19 @@ vi.mock('@react-three/drei', () => ({
     Text: () => <div data-testid="drei-text">Text</div>
 }));
 
+vi.mock('../HealthBadge', () => ({
+    getDomainHealthColor: (status: string) => (
+        status === 'healthy' ? '#4ade80' :
+        status === 'at-risk' ? '#fbbf24' :
+        '#ef4444'
+    ),
+    HealthBadge: ({ health }: any) => (
+        <div data-testid="health-badge" data-status={health.status}>
+            {Math.round(health.score * 100)}%
+        </div>
+    ),
+}));
+
 // Mock useLOD
 const mockUseLOD = vi.fn();
 vi.mock('../../hooks/useLOD', () => ({
@@ -230,6 +243,32 @@ describe('Domain Component', () => {
             const mesh = container.querySelector('mesh');
             expect(mesh).toBeInTheDocument();
             // farGeometry is created with new THREE.BoxGeometry(10, 2, 10)
+        });
+
+        it('renders a health badge when domain health is provided', () => {
+            mockIsDomainVisible.mockReturnValue(true);
+            mockUseLOD.mockReturnValue(LODLevel.MEDIUM);
+
+            render(
+                <Domain
+                    domain={mockDomain}
+                    position={[0, 0, 0]}
+                    domainHealth={{
+                        domainId: 'd1',
+                        score: 0.76,
+                        status: 'healthy',
+                        components: {
+                            couplingRatio: 0.1,
+                            centralizationFactor: 0.2,
+                            avgBlastRadius: 0.15,
+                        },
+                        serviceCount: 2,
+                    }}
+                />
+            );
+
+            expect(screen.getByTestId('health-badge')).toHaveAttribute('data-status', 'healthy');
+            expect(screen.getByTestId('health-badge')).toHaveTextContent('76%');
         });
     });
 });
