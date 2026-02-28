@@ -4,6 +4,7 @@ import {
   getLayout,
   computeLayout,
   invalidateLayoutCache,
+  LAYOUT_CACHE_VERSION,
 } from '../layoutService.js';
 import type { DbLayoutCache, DbDomain, DbTeam, DbService } from '../../db/schema.js';
 
@@ -29,7 +30,7 @@ describe('Layout Service', () => {
           teams: {},
           services: {},
         },
-        metadata: { version: 3 }, // Correct version (updated for floor cohesion)
+        metadata: { version: LAYOUT_CACHE_VERSION },
         created_at: new Date(),
         updated_at: new Date(),
         expires_at: new Date(Date.now() + 3600000), // 1 hour from now

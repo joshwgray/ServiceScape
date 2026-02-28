@@ -5,6 +5,7 @@ import {
   getUpstreamDependencies,
   getDownstreamDependencies,
   getDependenciesByType,
+  getAllDependencies,
   createDependency,
 } from '../dependencyRepository.js';
 import type { DbDependency } from '../../db/schema.js';
@@ -222,6 +223,63 @@ describe('Dependency Repository', () => {
       expect(mockPool.query).toHaveBeenCalledWith(
         expect.stringContaining('type = $1'),
         ['OBSERVED']
+      );
+    });
+  });
+
+  describe('getAllDependencies', () => {
+    it('should return all dependency edges when no type filter is provided', async () => {
+      const mockDeps: DbDependency[] = [
+        {
+          id: 'dep-1',
+          from_service_id: 'service-1',
+          to_service_id: 'service-2',
+          type: 'DECLARED',
+          metadata: {},
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+        {
+          id: 'dep-2',
+          from_service_id: 'service-3',
+          to_service_id: 'service-1',
+          type: 'OBSERVED',
+          metadata: {},
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      ];
+
+      mockQuery.mockResolvedValue({
+        rows: mockDeps,
+        command: '',
+        oid: 0,
+        fields: [],
+        rowCount: 2,
+      });
+
+      const result = await getAllDependencies(mockPool);
+
+      expect(result).toEqual(mockDeps);
+      expect(mockPool.query).toHaveBeenCalledWith(
+        expect.stringContaining('SELECT * FROM dependencies')
+      );
+    });
+
+    it('should filter dependencies by type when provided', async () => {
+      mockQuery.mockResolvedValue({
+        rows: [],
+        command: '',
+        oid: 0,
+        fields: [],
+        rowCount: 0,
+      });
+
+      await getAllDependencies(mockPool, 'DECLARED');
+
+      expect(mockPool.query).toHaveBeenCalledWith(
+        expect.stringContaining('WHERE type = $1'),
+        ['DECLARED']
       );
     });
   });

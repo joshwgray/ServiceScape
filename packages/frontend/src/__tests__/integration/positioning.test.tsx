@@ -249,24 +249,30 @@ describe('Integration: Positioning', () => {
   });
 
   it('should handle layout API failure gracefully', async () => {
-    vi.mocked(apiClient.getLayout).mockRejectedValue(new Error('API Error'));
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      vi.mocked(apiClient.getLayout).mockRejectedValue(new Error('API Error'));
 
-    const TestComponent = () => (
-      <OrganizationProvider>
-        <Canvas>
-          <CityLayout />
-        </Canvas>
-      </OrganizationProvider>
-    );
+      const TestComponent = () => (
+        <OrganizationProvider>
+          <Canvas>
+            <CityLayout />
+          </Canvas>
+        </OrganizationProvider>
+      );
 
-    render(<TestComponent />);
+      render(<TestComponent />);
 
-    await waitFor(() => {
-      expect(apiClient.getLayout).toHaveBeenCalled();
-    });
+      await waitFor(() => {
+        expect(apiClient.getLayout).toHaveBeenCalled();
+      });
 
-    // Should not crash on API failure
-    // Component should handle error gracefully
+      // Should not crash on API failure
+      // Component should handle error gracefully
+      expect(consoleErrorSpy).toHaveBeenCalled();
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
   });
 
   it('should handle empty layout data', async () => {

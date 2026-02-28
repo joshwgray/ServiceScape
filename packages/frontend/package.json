@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "node ./scripts/run-vitest-batches.mjs",
+    "test:watch": "node ../../node_modules/vitest/vitest.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

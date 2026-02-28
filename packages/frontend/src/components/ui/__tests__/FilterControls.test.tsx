@@ -10,13 +10,16 @@ vi.mock('../../../stores/selectionStore', () => ({
 
 describe('FilterControls', () => {
     const mockToggleFilter = vi.fn();
+    const mockToggleMetricsMode = vi.fn();
     
     beforeEach(() => {
         vi.clearAllMocks();
         (useSelectionStore as any).mockImplementation((selector: any) => {
              const state = {
                  dependencyFilters: { declared: true, observed: false },
-                 toggleFilter: mockToggleFilter
+                 toggleFilter: mockToggleFilter,
+                 metricsMode: true,
+                 toggleMetricsMode: mockToggleMetricsMode
              };
              // Handle selector
              if (selector) return selector(state);
@@ -26,11 +29,21 @@ describe('FilterControls', () => {
 
     it('renders checkboxes with correct checked state', () => {
         render(<FilterControls />);
+        const metricsLabel = screen.getByLabelText(/Risk Overlay/i);
         const declaredLabel = screen.getByLabelText(/Declared/i);
         const observedLabel = screen.getByLabelText(/Observed/i);
         
+        expect(metricsLabel).toBeChecked();
         expect(declaredLabel).toBeChecked();
         expect(observedLabel).not.toBeChecked();
+    });
+
+    it('calls toggleMetricsMode when risk overlay checkbox clicked', () => {
+        render(<FilterControls />);
+        const metricsCheckbox = screen.getByLabelText(/Risk Overlay/i);
+
+        fireEvent.click(metricsCheckbox);
+        expect(mockToggleMetricsMode).toHaveBeenCalled();
     });
 
     it('calls toggleFilter when checkbox clicked', () => {

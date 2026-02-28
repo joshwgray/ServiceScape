@@ -140,5 +140,20 @@ describe('DetailsPanel', () => {
         fireEvent.click(closeButton);
         expect(onClose).toHaveBeenCalled();
     });
-});
 
+    it('renders an Analyze Impact action for services and invokes it', () => {
+        const onAnalyzeImpact = vi.fn();
+        const item = {
+            id: '1',
+            name: 'Auth Service',
+            type: 'service',
+        } as any;
+
+        render(<DetailsPanel item={item} onAnalyzeImpact={onAnalyzeImpact} />);
+
+        const analyzeButton = screen.getByRole('button', { name: 'Analyze Impact' });
+        fireEvent.click(analyzeButton);
+
+        expect(onAnalyzeImpact).toHaveBeenCalled();
+    });
+});

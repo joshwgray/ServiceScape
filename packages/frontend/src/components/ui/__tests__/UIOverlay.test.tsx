@@ -15,6 +15,7 @@ import { useSelectionStore } from '../../../stores/selectionStore';
 import { useOrganization } from '../../../contexts/OrganizationContext';
 import { useServiceDetails } from '../../../hooks/useServiceDetails';
 import { useTeamMembers } from '../../../hooks/useTeamMembers';
+import { useImpactAnalysis } from '../../../hooks/useImpactAnalysis';
 
 // Mock all dependencies
 vi.mock('../../../stores/selectionStore', () => ({
@@ -29,10 +30,13 @@ vi.mock('../../../hooks/useServiceDetails', () => ({
 vi.mock('../../../hooks/useTeamMembers', () => ({
   useTeamMembers: vi.fn(),
 }));
+vi.mock('../../../hooks/useImpactAnalysis', () => ({
+  useImpactAnalysis: vi.fn(),
+}));
 
 // Mock DetailsPanel
 vi.mock('../DetailsPanel', () => ({
-  DetailsPanel: ({ item, members, onClose }: any) => (
+  DetailsPanel: ({ item, members, onClose, onAnalyzeImpact }: any) => (
     item ? (
       <div data-testid="details-panel">
         <div data-testid="panel-content">{item.name}</div>
@@ -42,9 +46,16 @@ vi.mock('../DetailsPanel', () => ({
                 {members.map((m: any) => <span key={m.id}>{m.name}</span>)}
             </div>
         )}
+        {onAnalyzeImpact ? <button onClick={onAnalyzeImpact} data-testid="details-analyze">Analyze</button> : null}
         <button onClick={onClose} data-testid="details-close">Close</button>
       </div>
     ) : null
+  ),
+}));
+
+vi.mock('../../ImpactAnalysisPanel', () => ({
+  ImpactAnalysisPanel: ({ analysis, loading }: any) => (
+    analysis || loading ? <div data-testid="impact-panel">Impact Panel</div> : null
   ),
 }));
 
@@ -76,6 +87,13 @@ describe('UIOverlay with DetailsPanel', () => {
 
         (useServiceDetails as any).mockReturnValue({ details: null });
         (useTeamMembers as any).mockReturnValue({ members: [], loading: false });
+        (useImpactAnalysis as any).mockReturnValue({
+            analysis: null,
+            loading: false,
+            error: null,
+            analyzeImpact: vi.fn(),
+            clearAnalysis: vi.fn(),
+        });
     });
 
     it('renders DetailsPanel when service is selected', () => {
@@ -149,5 +167,29 @@ describe('UIOverlay with DetailsPanel', () => {
         fireEvent.click(closeBtn);
         
         expect(mockClearSelection).toHaveBeenCalled();
+    });
+
+    it('triggers impact analysis for the selected service', () => {
+        const analyzeImpact = vi.fn();
+        (useSelectionStore as any).mockImplementation((selector: any) => {
+            const state = {
+                selectedServiceId: 'service-1',
+                selectService: mockSelectService,
+                clearSelection: mockClearSelection
+            };
+            return selector(state);
+        });
+        (useImpactAnalysis as any).mockReturnValue({
+            analysis: null,
+            loading: false,
+            error: null,
+            analyzeImpact,
+            clearAnalysis: vi.fn(),
+        });
+
+        render(<UIOverlay />);
+
+        fireEvent.click(screen.getByTestId('details-analyze'));
+        expect(analyzeImpact).toHaveBeenCalledWith('service-1');
     });
 });

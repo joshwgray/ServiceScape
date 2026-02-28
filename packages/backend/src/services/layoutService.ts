@@ -15,7 +15,7 @@ export interface LayoutPositions {
 
 const CACHE_KEY = 'layout_all';
 const CACHE_DURATION_MS = 3600000; // 1 hour
-const CACHE_VERSION = 5; // Increment when layout structure changes
+export const LAYOUT_CACHE_VERSION = 5; // Increment when layout structure changes
 
 /**
  * Get layout positions, using cache if available
@@ -32,7 +32,7 @@ export async function getLayout(pool: Pool): Promise<LayoutPositions> {
   // Check if cache is valid (not expired AND correct version)
   if (cachedLayout && cachedLayout.expires_at) {
     const isNotExpired = new Date(cachedLayout.expires_at) > new Date();
-    const hasCorrectVersion = cachedLayout.metadata?.version === CACHE_VERSION;
+    const hasCorrectVersion = cachedLayout.metadata?.version === LAYOUT_CACHE_VERSION;
     
     if (isNotExpired && hasCorrectVersion) {
       return cachedLayout.positions as LayoutPositions;
@@ -136,7 +136,7 @@ export async function computeLayout(pool: Pool): Promise<LayoutPositions> {
  */
 async function saveLayoutCache(pool: Pool, positions: LayoutPositions): Promise<void> {
   const expiresAt = new Date(Date.now() + CACHE_DURATION_MS);
-  const metadata = { version: CACHE_VERSION };
+  const metadata = { version: LAYOUT_CACHE_VERSION };
 
   await pool.query(
     `INSERT INTO layout_cache (cache_key, layout_type, positions, metadata, expires_at)
